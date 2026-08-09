@@ -1,5 +1,6 @@
 import { Box, Download, Dices, FileBox, Palette, SlidersHorizontal } from 'lucide-react'
-import type { MazeSettings, MazeStyle } from '../types'
+import type { GeneratorMode, MazeSettings, MazeStyle } from '../types'
+import { GeneratorSwitcher } from './GeneratorSwitcher'
 
 interface ControlPanelProps {
   settings: MazeSettings
@@ -9,6 +10,8 @@ interface ControlPanelProps {
   onNewSeed: () => void
   onExport: (format: 'stl' | 'glb') => void
   exporting: string | null
+  mode: GeneratorMode
+  onModeChange: (mode: GeneratorMode) => void
 }
 
 const STYLES: Array<{ value: MazeStyle; name: string; description: string }> = [
@@ -60,6 +63,8 @@ export function ControlPanel({
   onNewSeed,
   onExport,
   exporting,
+  mode,
+  onModeChange,
 }: ControlPanelProps) {
   return (
     <aside className="panel">
@@ -69,6 +74,9 @@ export function ControlPanel({
       </div>
 
       <div className="panel__scroll">
+        <section className="section section--generator">
+          <GeneratorSwitcher mode={mode} onChange={onModeChange} />
+        </section>
         <section className="section">
           <div className="section__title"><SlidersHorizontal size={15} /><span>Styl labyrintu</span></div>
           <div className="style-list">
