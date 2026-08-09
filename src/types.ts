@@ -2,7 +2,13 @@ export type MazeStyle = 'classic' | 'braided' | 'rooms'
 export type GeneratorMode = 'maze' | 'organizer' | 'template' | 'gadget'
 export type OrganizerLayout = 'grid' | 'recursive'
 export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius'
-export type GadgetType = 'cable-comb' | 'tool-rack' | 'phone-stand'
+export type GadgetType =
+  | 'cable-comb'
+  | 'tool-rack'
+  | 'phone-stand'
+  | 'key-rack'
+  | 'battery-holder'
+  | 'headphone-stand'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -113,6 +119,15 @@ export interface GadgetSettings {
   phoneAngle: number
   deviceThickness: number
   fitClearance: number
+  mountingHoleDiameter: number
+  batteryRows: number
+  batteryColumns: number
+  batteryDiameter: number
+  batteryClearance: number
+  baseThickness: number
+  standHeight: number
+  stemWidth: number
+  headrestWidth: number
 }
 
 export interface GadgetCutout {

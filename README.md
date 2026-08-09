@@ -36,6 +36,9 @@ Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových org
 - kabelový hřeben s nastavitelnými drážkami,
 - stojan na vrtáky, frézy, nástroje nebo pera,
 - skládací stojánek na telefon ze základny, opěrky a předního dorazu,
+- nástěnný věšák na klíče se zářezy a montážními otvory,
+- dvouvrstvý držák tužkových i větších baterií s nastavitelným rastrem, vůlí a pevným dnem,
+- dvoudílný stojan na sluchátka se spojovacím slotem a širokou horní opěrkou,
 - DXF rozložení jednotlivých dílů pro CNC obrábění,
 - STL a generic 3MF v milimetrech pro Bambu Studio a další slicery.
 
