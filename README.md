@@ -2,6 +2,8 @@
 
 Webová aplikace pro parametrické generování 3D labyrintů a zásuvkových organizérů. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo 3D tisk.
 
+**Webová aplikace:** [omni944.github.io/labyrinth-forge](https://omni944.github.io/labyrinth-forge/)
+
 ## Funkce
 
 - tři styly labyrintu: klasický, pletený a komnaty,
