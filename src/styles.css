@@ -29,7 +29,7 @@ button { color: inherit; }
 .section { padding: 22px 24px 20px; border-bottom: 1px solid var(--line); }
 .section--generator { padding-top: 14px; padding-bottom: 14px; }
 .section--accent { background: rgba(185, 237, 63, .035); }
-.generator-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border: 1px solid #30322c; border-radius: 7px; background: #141512; }
+.generator-switch { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 4px; border: 1px solid #30322c; border-radius: 7px; background: #141512; }
 .generator-switch button { display: flex; align-items: center; justify-content: center; gap: 7px; height: 34px; border: 0; border-radius: 4px; color: #81857a; background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; transition: .15s ease; }
 .generator-switch button:hover { color: #c9ccc1; }
 .generator-switch button.is-active { color: #17180f; background: var(--acid); }

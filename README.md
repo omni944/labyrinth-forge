@@ -1,6 +1,6 @@
 # Labyrinth Forge
 
-Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových organizérů a CNC šablon. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo výrobu.
+Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových organizérů, CNC šablon a praktických gadgetů. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo výrobu.
 
 **Webová aplikace:** [omni944.github.io/labyrinth-forge](https://omni944.github.io/labyrinth-forge/)
 
@@ -30,6 +30,14 @@ Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových org
 - radiusové frézovací šablony s montážními otvory,
 - přesný 2D export DXF v milimetrech s vrstvami `OUTLINE` a `DRILLING`,
 - 3D export STL a GLB.
+
+### CNC a 3D gadgety
+
+- kabelový hřeben s nastavitelnými drážkami,
+- stojan na vrtáky, frézy, nástroje nebo pera,
+- skládací stojánek na telefon ze základny, opěrky a předního dorazu,
+- DXF rozložení jednotlivých dílů pro CNC obrábění,
+- STL a generic 3MF v milimetrech pro Bambu Studio a další slicery.
 
 ## Spuštění
 

@@ -1,16 +1,19 @@
-import { Grid3X3, RotateCcw, Ruler, ScanLine, Wrench } from 'lucide-react'
+import { Gamepad2, Grid3X3, RotateCcw, Ruler, ScanLine, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
+import { GadgetControlPanel } from './components/GadgetControlPanel'
+import { GadgetScene } from './components/GadgetScene'
 import { MazeScene } from './components/MazeScene'
 import { OrganizerControlPanel } from './components/OrganizerControlPanel'
 import { OrganizerScene } from './components/OrganizerScene'
 import { TemplateControlPanel } from './components/TemplateControlPanel'
 import { TemplateScene } from './components/TemplateScene'
-import { exportGLB, exportOrganizerGLB, exportOrganizerSTL, exportSTL, exportTemplateGLB, exportTemplateSTL } from './lib/export'
+import { exportGadget3MF, exportGadgetSTL, exportGLB, exportOrganizerGLB, exportOrganizerSTL, exportSTL, exportTemplateGLB, exportTemplateSTL } from './lib/export'
+import { downloadGadgetDXF, generateGadget } from './lib/gadget'
 import { buildGeometryData, generateMaze } from './lib/maze'
 import { generateOrganizer } from './lib/organizer'
 import { downloadTemplateDXF, generateTemplate } from './lib/template'
-import type { GeneratorMode, MazeSettings, OrganizerSettings, TemplateSettings } from './types'
+import type { GadgetSettings, GeneratorMode, MazeSettings, OrganizerSettings, TemplateSettings } from './types'
 
 const INITIAL_SETTINGS: MazeSettings = {
   columns: 16,
@@ -59,11 +62,30 @@ const INITIAL_TEMPLATE_SETTINGS: TemplateSettings = {
   mountingHoleDiameter: 6,
 }
 
+const INITIAL_GADGET_SETTINGS: GadgetSettings = {
+  type: 'cable-comb',
+  materialThickness: 8,
+  gadgetWidth: 160,
+  gadgetDepth: 60,
+  cableSlotCount: 5,
+  cableSlotWidth: 12,
+  cableSlotDepth: 30,
+  toolRows: 2,
+  toolColumns: 6,
+  toolHoleDiameter: 12,
+  toolMargin: 18,
+  phoneBackHeight: 160,
+  phoneAngle: 68,
+  deviceThickness: 12,
+  fitClearance: 0.4,
+}
+
 function App() {
   const [mode, setMode] = useState<GeneratorMode>('maze')
   const [settings, setSettings] = useState(INITIAL_SETTINGS)
   const [organizerSettings, setOrganizerSettings] = useState(INITIAL_ORGANIZER_SETTINGS)
   const [templateSettings, setTemplateSettings] = useState(INITIAL_TEMPLATE_SETTINGS)
+  const [gadgetSettings, setGadgetSettings] = useState(INITIAL_GADGET_SETTINGS)
   const [wallColor, setWallColor] = useState('#b9ed3f')
   const [resetSignal, setResetSignal] = useState(0)
   const [exporting, setExporting] = useState<string | null>(null)
@@ -72,6 +94,7 @@ function App() {
   const geometry = useMemo(() => buildGeometryData(maze, settings), [maze, settings])
   const organizerBins = useMemo(() => generateOrganizer(organizerSettings), [organizerSettings])
   const templateData = useMemo(() => generateTemplate(templateSettings), [templateSettings])
+  const gadgetData = useMemo(() => generateGadget(gadgetSettings), [gadgetSettings])
 
   const updateSetting = <K extends keyof MazeSettings>(key: K, value: MazeSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
@@ -97,6 +120,20 @@ function App() {
       return
     }
     setTemplateSettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateGadgetSetting = <K extends keyof GadgetSettings>(key: K, value: GadgetSettings[K]) => {
+    if (key === 'type') {
+      const type = value as GadgetSettings['type']
+      const preset: Partial<GadgetSettings> = type === 'tool-rack'
+        ? { materialThickness: 25, gadgetWidth: 180, gadgetDepth: 100, toolRows: 2, toolColumns: 6, toolHoleDiameter: 12, toolMargin: 18 }
+        : type === 'phone-stand'
+          ? { materialThickness: 6, gadgetWidth: 85, gadgetDepth: 140, phoneBackHeight: 160, phoneAngle: 68, deviceThickness: 12, fitClearance: 0.4 }
+          : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
+      setGadgetSettings((current) => ({ ...current, ...preset, type }))
+      return
+    }
+    setGadgetSettings((current) => ({ ...current, [key]: value }))
   }
 
   const handleExport = async (format: 'stl' | 'glb') => {
@@ -130,11 +167,22 @@ function App() {
     }
   }
 
+  const handleGadgetExport = async (format: 'dxf' | 'stl' | '3mf') => {
+    setExporting(format)
+    try {
+      if (format === 'dxf') downloadGadgetDXF(gadgetData, gadgetSettings)
+      else if (format === 'stl') exportGadgetSTL(gadgetData, gadgetSettings)
+      else await exportGadget3MF(gadgetData, gadgetSettings)
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const modelWidth = Math.round(geometry.width)
   const modelDepth = Math.round(geometry.depth)
   const modelHeight = Math.round((settings.wallHeight + settings.floorThickness) * 10) / 10
-  const generatorNumber = mode === 'maze' ? '01' : mode === 'organizer' ? '02' : '03'
-  const generatorTitle = mode === 'maze' ? '3D labyrint' : mode === 'organizer' ? 'Zásuvkový organizér' : 'CNC šablony a přípravky'
+  const generatorNumber = mode === 'maze' ? '01' : mode === 'organizer' ? '02' : mode === 'template' ? '03' : '04'
+  const generatorTitle = mode === 'maze' ? '3D labyrint' : mode === 'organizer' ? 'Zásuvkový organizér' : mode === 'template' ? 'CNC šablony a přípravky' : 'CNC a 3D gadgety'
   const templateHoleUnit = templateData.holes.length === 1 ? 'otvor' : templateData.holes.length >= 2 && templateData.holes.length <= 4 ? 'otvory' : 'otvorů'
 
   return (
@@ -160,7 +208,7 @@ function App() {
           onExport={handleOrganizerExport}
           exporting={exporting}
         />
-      ) : (
+      ) : mode === 'template' ? (
         <TemplateControlPanel
           settings={templateSettings}
           holeCount={templateData.holes.length}
@@ -168,6 +216,16 @@ function App() {
           onModeChange={setMode}
           onChange={updateTemplateSetting}
           onExport={handleTemplateExport}
+          exporting={exporting}
+        />
+      ) : (
+        <GadgetControlPanel
+          settings={gadgetSettings}
+          partCount={gadgetData.parts.length}
+          mode={mode}
+          onModeChange={setMode}
+          onChange={updateGadgetSetting}
+          onExport={handleGadgetExport}
           exporting={exporting}
         />
       )}
@@ -185,8 +243,10 @@ function App() {
             <MazeScene data={geometry} settings={settings} wallColor={wallColor} resetSignal={resetSignal} />
           ) : mode === 'organizer' ? (
             <OrganizerScene bins={organizerBins} settings={organizerSettings} resetSignal={resetSignal} />
-          ) : (
+          ) : mode === 'template' ? (
             <TemplateScene data={templateData} settings={templateSettings} resetSignal={resetSignal} />
+          ) : (
+            <GadgetScene data={gadgetData} resetSignal={resetSignal} />
           )}
           <div className="viewport__hint">Tažením otáčet · Kolečkem přiblížit · Pravým tlačítkem posunout</div>
           <button className="reset-view" onClick={() => setResetSignal((value) => value + 1)} title="Obnovit pohled">
@@ -199,18 +259,18 @@ function App() {
 
         <footer className="workspace__footer">
           <div className="metric">
-            {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : <Wrench size={16} />}
-            <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : 'Šablona'}</span>
-            <strong>{mode === 'maze' ? `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : `${templateData.holes.length} ${templateHoleUnit}`}</strong>
+            {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : <Gamepad2 size={16} />}
+            <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : 'Gadget'}</span>
+            <strong>{mode === 'maze' ? `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateData.holes.length} ${templateHoleUnit}` : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
           </div>
           <div className="metric">
             <Ruler size={16} />
-            <span>{mode === 'maze' ? 'Výsledný rozměr' : mode === 'organizer' ? 'Rozměr zásuvky' : 'Rozměr polotovaru'}</span>
-            <strong>{mode === 'maze' ? `${modelWidth} × ${modelDepth} × ${modelHeight} mm` : mode === 'organizer' ? `${organizerSettings.drawerWidth} × ${organizerSettings.drawerDepth} × ${organizerSettings.binHeight} mm` : `${templateSettings.plateWidth} × ${templateSettings.plateDepth} × ${templateSettings.plateThickness} mm`}</strong>
+            <span>{mode === 'maze' ? 'Výsledný rozměr' : mode === 'organizer' ? 'Rozměr zásuvky' : mode === 'template' ? 'Rozměr polotovaru' : 'Obálka sestavy'}</span>
+            <strong>{mode === 'maze' ? `${modelWidth} × ${modelDepth} × ${modelHeight} mm` : mode === 'organizer' ? `${organizerSettings.drawerWidth} × ${organizerSettings.drawerDepth} × ${organizerSettings.binHeight} mm` : mode === 'template' ? `${templateSettings.plateWidth} × ${templateSettings.plateDepth} × ${templateSettings.plateThickness} mm` : `${Math.round(gadgetData.width)} × ${Math.round(gadgetData.depth)} × ${Math.round(gadgetData.height)} mm`}</strong>
           </div>
           <div className="metric metric--right">
             <span>{mode === 'maze' ? 'Počet stěn' : mode === 'organizer' ? 'Rozvržení' : 'Výrobní formát'}</span>
-            <strong>{mode === 'maze' ? geometry.walls.length : mode === 'organizer' ? organizerSettings.layout === 'grid' ? `${organizerSettings.columns} × ${organizerSettings.rows}` : `4^${organizerSettings.iterations}` : 'DXF · STL · GLB'}</strong>
+            <strong>{mode === 'maze' ? geometry.walls.length : mode === 'organizer' ? organizerSettings.layout === 'grid' ? `${organizerSettings.columns} × ${organizerSettings.rows}` : `4^${organizerSettings.iterations}` : mode === 'template' ? 'DXF · STL · GLB' : 'DXF · STL · 3MF'}</strong>
           </div>
         </footer>
       </section>

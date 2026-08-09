@@ -1,4 +1,4 @@
-import { Grid3X3, Route, Wrench } from 'lucide-react'
+import { Gamepad2, Grid3X3, Route, Wrench } from 'lucide-react'
 import type { GeneratorMode } from '../types'
 
 export function GeneratorSwitcher({ mode, onChange }: { mode: GeneratorMode; onChange: (mode: GeneratorMode) => void }) {
@@ -12,6 +12,9 @@ export function GeneratorSwitcher({ mode, onChange }: { mode: GeneratorMode; onC
       </button>
       <button className={mode === 'template' ? 'is-active' : ''} onClick={() => onChange('template')}>
         <Wrench size={15} />Šablony
+      </button>
+      <button className={mode === 'gadget' ? 'is-active' : ''} onClick={() => onChange('gadget')}>
+        <Gamepad2 size={15} />Gadgety
       </button>
     </div>
   )
