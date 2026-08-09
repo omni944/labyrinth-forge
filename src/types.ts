@@ -1,7 +1,8 @@
 export type MazeStyle = 'classic' | 'braided' | 'rooms'
-export type GeneratorMode = 'maze' | 'organizer' | 'template'
+export type GeneratorMode = 'maze' | 'organizer' | 'template' | 'gadget'
 export type OrganizerLayout = 'grid' | 'recursive'
 export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius'
+export type GadgetType = 'cable-comb' | 'tool-rack' | 'phone-stand'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -94,4 +95,43 @@ export interface TemplateGeometryData {
   depth: number
   outline: TemplatePoint[]
   holes: TemplateHole[]
+}
+
+export interface GadgetSettings {
+  type: GadgetType
+  materialThickness: number
+  gadgetWidth: number
+  gadgetDepth: number
+  cableSlotCount: number
+  cableSlotWidth: number
+  cableSlotDepth: number
+  toolRows: number
+  toolColumns: number
+  toolHoleDiameter: number
+  toolMargin: number
+  phoneBackHeight: number
+  phoneAngle: number
+  deviceThickness: number
+  fitClearance: number
+}
+
+export interface GadgetCutout {
+  outline: TemplatePoint[]
+}
+
+export interface GadgetPart {
+  name: string
+  outline: TemplatePoint[]
+  holes: TemplateHole[]
+  cutouts: GadgetCutout[]
+  thickness: number
+  position: [number, number, number]
+  rotation: [number, number, number]
+}
+
+export interface GadgetGeometryData {
+  parts: GadgetPart[]
+  width: number
+  depth: number
+  height: number
 }

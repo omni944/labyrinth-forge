@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
 import JSZip from 'jszip'
-import type { MazeGeometryData, MazeSettings, OrganizerBin, OrganizerSettings, TemplateGeometryData, TemplateSettings } from '../types'
+import type { GadgetGeometryData, GadgetSettings, MazeGeometryData, MazeSettings, OrganizerBin, OrganizerSettings, TemplateGeometryData, TemplateSettings } from '../types'
+import { createGadgetGroup } from './gadget'
 import { createBinGroup, disposeObject } from './organizer'
 import { createTemplateGroup } from './template'
 
@@ -105,4 +106,46 @@ export async function exportTemplateGLB(data: TemplateGeometryData, settings: Te
   } finally {
     disposeObject(group)
   }
+}
+
+export function build3MFModelXML(object: THREE.Object3D) {
+  object.updateMatrixWorld(true)
+  const vertices: string[] = []
+  const triangles: string[] = []
+  let vertexIndex = 0
+  const vertex = new THREE.Vector3()
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    const source = child.geometry as THREE.BufferGeometry
+    const geometry = source.index ? source.toNonIndexed() : source
+    const positions = geometry.getAttribute('position')
+    for (let index = 0; index < positions.count; index += 1) {
+      vertex.fromBufferAttribute(positions, index).applyMatrix4(child.matrixWorld)
+      vertices.push(`<vertex x="${vertex.x.toFixed(5)}" y="${vertex.z.toFixed(5)}" z="${vertex.y.toFixed(5)}"/>`)
+    }
+    for (let index = 0; index < positions.count; index += 3) {
+      triangles.push(`<triangle v1="${vertexIndex + index}" v2="${vertexIndex + index + 1}" v3="${vertexIndex + index + 2}"/>`)
+    }
+    vertexIndex += positions.count
+    if (geometry !== source) geometry.dispose()
+  })
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="cs-CZ" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">Labyrinth Forge Gadget</metadata><resources><object id="1" type="model"><mesh><vertices>${vertices.join('')}</vertices><triangles>${triangles.join('')}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`
+}
+
+export function exportGadgetSTL(data: GadgetGeometryData, settings: GadgetSettings) {
+  const group = createGadgetGroup(data)
+  const result = new STLExporter().parse(group, { binary: true })
+  download(new Blob([result], { type: 'model/stl' }), `gadget-${settings.type}.stl`)
+  disposeObject(group)
+}
+
+export async function exportGadget3MF(data: GadgetGeometryData, settings: GadgetSettings) {
+  const group = createGadgetGroup(data)
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>')
+  zip.folder('_rels')?.file('.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+  zip.folder('3D')?.file('3dmodel.model', build3MFModelXML(group))
+  const archive = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  download(archive, `gadget-${settings.type}.3mf`)
+  disposeObject(group)
 }
