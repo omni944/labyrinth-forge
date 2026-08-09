@@ -18,8 +18,8 @@ export function GadgetScene({ data, resetSignal }: { data: GadgetGeometryData; r
     <Canvas dpr={[1, 2]} shadows gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
       <color attach="background" args={['#141512']} />
       <fog attach="fog" args={['#141512', size * 1.6, size * 3.2]} />
-      <PerspectiveCamera key={`gadget-camera-${resetSignal}`} makeDefault position={[size * 0.9, size * 1.05, size * 1.05]} fov={42} near={0.1} far={size * 12} />
-      <OrbitControls key={`gadget-controls-${resetSignal}`} makeDefault target={[0, data.height * 0.2, 0]} minDistance={size * 0.3} maxDistance={size * 4} maxPolarAngle={Math.PI / 2.03} enableDamping dampingFactor={0.07} />
+      <PerspectiveCamera key={`gadget-camera-${resetSignal}`} makeDefault position={[size * 1.15, size * 1.2, size * 1.35]} fov={42} near={0.1} far={size * 12} />
+      <OrbitControls key={`gadget-controls-${resetSignal}`} makeDefault target={[0, data.height * 0.42, 0]} minDistance={size * 0.3} maxDistance={size * 4} maxPolarAngle={Math.PI / 2.03} enableDamping dampingFactor={0.07} />
       <ambientLight intensity={0.9} />
       <directionalLight position={[size * 0.8, size * 1.3, size * 0.5]} intensity={2.7} castShadow shadow-mapSize={[2048, 2048]} />
       <GadgetModel data={data} />

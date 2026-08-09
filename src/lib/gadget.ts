@@ -112,10 +112,105 @@ function phoneStand(settings: GadgetSettings): GadgetGeometryData {
   }
 }
 
+function keyRack(settings: GadgetSettings): GadgetGeometryData {
+  const halfWidth = settings.gadgetWidth / 2
+  const halfDepth = settings.gadgetDepth / 2
+  const usableWidth = settings.gadgetWidth * 0.72
+  const centers = Array.from({ length: settings.cableSlotCount }, (_, index) =>
+    settings.cableSlotCount === 1 ? 0 : -usableWidth / 2 + (index / (settings.cableSlotCount - 1)) * usableWidth,
+  ).sort((a, b) => b - a)
+  const outline: TemplatePoint[] = [
+    { x: -halfWidth, z: halfDepth },
+    { x: halfWidth, z: halfDepth },
+    { x: halfWidth, z: -halfDepth },
+  ]
+  centers.forEach((center) => {
+    const halfSlot = settings.cableSlotWidth / 2
+    outline.push(
+      { x: center + halfSlot, z: -halfDepth },
+      { x: center + halfSlot, z: -halfDepth + settings.cableSlotDepth },
+      { x: center - halfSlot, z: -halfDepth + settings.cableSlotDepth },
+      { x: center - halfSlot, z: -halfDepth },
+    )
+  })
+  outline.push({ x: -halfWidth, z: -halfDepth })
+  const part = basePart('vesak-na-klice', outline, settings.materialThickness)
+  part.holes = [-1, 1].map((direction) => ({
+    x: direction * settings.gadgetWidth * 0.38,
+    z: settings.gadgetDepth * 0.23,
+    diameter: settings.mountingHoleDiameter,
+  }))
+  return {
+    parts: [part],
+    width: settings.gadgetWidth,
+    depth: settings.gadgetDepth,
+    height: settings.materialThickness,
+  }
+}
+
+function batteryHolder(settings: GadgetSettings): GadgetGeometryData {
+  const top = basePart('drzak-baterii-horni', rectangle(settings.gadgetWidth, settings.gadgetDepth), settings.materialThickness)
+  const bottom = basePart('drzak-baterii-dno', rectangle(settings.gadgetWidth, settings.gadgetDepth), settings.baseThickness)
+  const xStart = -settings.gadgetWidth / 2 + settings.toolMargin
+  const xEnd = settings.gadgetWidth / 2 - settings.toolMargin
+  const zStart = -settings.gadgetDepth / 2 + settings.toolMargin
+  const zEnd = settings.gadgetDepth / 2 - settings.toolMargin
+  const positions = (count: number, start: number, end: number) => count === 1
+    ? [(start + end) / 2]
+    : Array.from({ length: count }, (_, index) => start + (index / (count - 1)) * (end - start))
+  const xValues = positions(settings.batteryColumns, xStart, xEnd)
+  const zValues = positions(settings.batteryRows, zStart, zEnd)
+  top.holes = zValues.flatMap((z) => xValues.map((x): TemplateHole => ({
+    x,
+    z,
+    diameter: settings.batteryDiameter + settings.batteryClearance,
+  })))
+  top.position = [0, settings.baseThickness, 0]
+  return {
+    parts: [bottom, top],
+    width: settings.gadgetWidth,
+    depth: settings.gadgetDepth,
+    height: settings.baseThickness + settings.materialThickness,
+  }
+}
+
+function headphoneStand(settings: GadgetSettings): GadgetGeometryData {
+  const tabDepth = settings.materialThickness * 2.2
+  const slotDepth = settings.materialThickness + settings.fitClearance
+  const headrestDepth = Math.min(35, settings.standHeight * 0.18)
+  const halfStem = settings.stemWidth / 2
+  const halfHeadrest = settings.headrestWidth / 2
+  const base = basePart('sluchatka-zakladna', rectangle(settings.gadgetWidth, settings.gadgetDepth), settings.materialThickness)
+  base.cutouts.push({ outline: rectangle(settings.stemWidth, slotDepth) })
+
+  const uprightOutline: TemplatePoint[] = [
+    { x: -halfStem, z: -tabDepth },
+    { x: halfStem, z: -tabDepth },
+    { x: halfStem, z: settings.standHeight - headrestDepth },
+    { x: halfHeadrest, z: settings.standHeight - headrestDepth },
+    { x: halfHeadrest, z: settings.standHeight },
+    { x: -halfHeadrest, z: settings.standHeight },
+    { x: -halfHeadrest, z: settings.standHeight - headrestDepth },
+    { x: -halfStem, z: settings.standHeight - headrestDepth },
+  ]
+  const upright = basePart('sluchatka-stojina', uprightOutline, settings.materialThickness)
+  upright.rotation = [Math.PI / 2, 0, 0]
+  upright.position = [0, settings.materialThickness * 0.2, 0]
+  return {
+    parts: [base, upright],
+    width: Math.max(settings.gadgetWidth, settings.headrestWidth),
+    depth: settings.gadgetDepth,
+    height: settings.standHeight,
+  }
+}
+
 export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
   if (settings.type === 'cable-comb') return cableComb(settings)
   if (settings.type === 'tool-rack') return toolRack(settings)
-  return phoneStand(settings)
+  if (settings.type === 'phone-stand') return phoneStand(settings)
+  if (settings.type === 'key-rack') return keyRack(settings)
+  if (settings.type === 'battery-holder') return batteryHolder(settings)
+  return headphoneStand(settings)
 }
 
 function pathFromOutline(outline: TemplatePoint[]) {

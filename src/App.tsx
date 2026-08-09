@@ -78,6 +78,15 @@ const INITIAL_GADGET_SETTINGS: GadgetSettings = {
   phoneAngle: 68,
   deviceThickness: 12,
   fitClearance: 0.4,
+  mountingHoleDiameter: 6,
+  batteryRows: 2,
+  batteryColumns: 5,
+  batteryDiameter: 14.5,
+  batteryClearance: 0.5,
+  baseThickness: 3,
+  standHeight: 240,
+  stemWidth: 42,
+  headrestWidth: 110,
 }
 
 function App() {
@@ -129,7 +138,13 @@ function App() {
         ? { materialThickness: 25, gadgetWidth: 180, gadgetDepth: 100, toolRows: 2, toolColumns: 6, toolHoleDiameter: 12, toolMargin: 18 }
         : type === 'phone-stand'
           ? { materialThickness: 6, gadgetWidth: 85, gadgetDepth: 140, phoneBackHeight: 160, phoneAngle: 68, deviceThickness: 12, fitClearance: 0.4 }
-          : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
+          : type === 'key-rack'
+            ? { materialThickness: 12, gadgetWidth: 240, gadgetDepth: 70, cableSlotCount: 5, cableSlotWidth: 14, cableSlotDepth: 30, mountingHoleDiameter: 6 }
+            : type === 'battery-holder'
+              ? { materialThickness: 22, gadgetWidth: 180, gadgetDepth: 100, batteryRows: 2, batteryColumns: 5, batteryDiameter: 14.5, batteryClearance: 0.5, baseThickness: 3, toolMargin: 18 }
+              : type === 'headphone-stand'
+                ? { materialThickness: 12, gadgetWidth: 180, gadgetDepth: 150, standHeight: 240, stemWidth: 42, headrestWidth: 110, fitClearance: 0.4 }
+                : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
       setGadgetSettings((current) => ({ ...current, ...preset, type }))
       return
     }
