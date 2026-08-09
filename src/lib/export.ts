@@ -2,8 +2,9 @@ import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
 import JSZip from 'jszip'
-import type { MazeGeometryData, MazeSettings, OrganizerBin, OrganizerSettings } from '../types'
+import type { MazeGeometryData, MazeSettings, OrganizerBin, OrganizerSettings, TemplateGeometryData, TemplateSettings } from '../types'
 import { createBinGroup, disposeObject } from './organizer'
+import { createTemplateGroup } from './template'
 
 function buildExportGroup(data: MazeGeometryData, settings: MazeSettings) {
   const group = new THREE.Group()
@@ -84,6 +85,23 @@ export async function exportOrganizerGLB(bins: OrganizerBin[], settings: Organiz
   try {
     const result = await new GLTFExporter().parseAsync(group, { binary: true, onlyVisible: true })
     download(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' }), 'zasuvkovy-organizer.glb')
+  } finally {
+    disposeObject(group)
+  }
+}
+
+export function exportTemplateSTL(data: TemplateGeometryData, settings: TemplateSettings) {
+  const group = createTemplateGroup(data, settings)
+  const result = new STLExporter().parse(group, { binary: true })
+  download(new Blob([result], { type: 'model/stl' }), `sablona-${settings.type}.stl`)
+  disposeObject(group)
+}
+
+export async function exportTemplateGLB(data: TemplateGeometryData, settings: TemplateSettings) {
+  const group = createTemplateGroup(data, settings)
+  try {
+    const result = await new GLTFExporter().parseAsync(group, { binary: true, onlyVisible: true })
+    download(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' }), `sablona-${settings.type}.glb`)
   } finally {
     disposeObject(group)
   }

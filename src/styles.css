@@ -29,7 +29,7 @@ button { color: inherit; }
 .section { padding: 22px 24px 20px; border-bottom: 1px solid var(--line); }
 .section--generator { padding-top: 14px; padding-bottom: 14px; }
 .section--accent { background: rgba(185, 237, 63, .035); }
-.generator-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; border: 1px solid #30322c; border-radius: 7px; background: #141512; }
+.generator-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border: 1px solid #30322c; border-radius: 7px; background: #141512; }
 .generator-switch button { display: flex; align-items: center; justify-content: center; gap: 7px; height: 34px; border: 0; border-radius: 4px; color: #81857a; background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; transition: .15s ease; }
 .generator-switch button:hover { color: #c9ccc1; }
 .generator-switch button.is-active { color: #17180f; background: var(--acid); }
@@ -63,6 +63,8 @@ button { color: inherit; }
 .seed-button span { flex: 1; text-align: left; font-size: 11px; font-weight: 700; }
 .seed-button svg { color: var(--acid); }
 .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.export-row--three { grid-template-columns: repeat(3, 1fr); }
+.export-row--three button { padding: 0 5px; }
 .export-row button { height: 40px; display: flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid var(--acid); border-radius: 5px; background: var(--acid); color: #15160f; font-size: 11px; font-weight: 800; cursor: pointer; }
 .export-row button:last-child { color: var(--acid); background: transparent; }
 .export-row button:disabled { opacity: .55; cursor: wait; }
