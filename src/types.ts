@@ -1,6 +1,7 @@
 export type MazeStyle = 'classic' | 'braided' | 'rooms'
-export type GeneratorMode = 'maze' | 'organizer'
+export type GeneratorMode = 'maze' | 'organizer' | 'template'
 export type OrganizerLayout = 'grid' | 'recursive'
+export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -60,4 +61,37 @@ export interface OrganizerBin {
   z: number
   width: number
   depth: number
+}
+
+export interface TemplateSettings {
+  type: TemplateType
+  plateWidth: number
+  plateDepth: number
+  plateThickness: number
+  holeDiameter: number
+  edgeMargin: number
+  gridRows: number
+  gridColumns: number
+  pinCount: number
+  pinSpacing: number
+  pinColumns: number
+  pinRowSpacing: number
+  cornerRadius: number
+  mountingHoleDiameter: number
+}
+
+export interface TemplatePoint {
+  x: number
+  z: number
+}
+
+export interface TemplateHole extends TemplatePoint {
+  diameter: number
+}
+
+export interface TemplateGeometryData {
+  width: number
+  depth: number
+  outline: TemplatePoint[]
+  holes: TemplateHole[]
 }

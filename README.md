@@ -1,6 +1,6 @@
 # Labyrinth Forge
 
-Webová aplikace pro parametrické generování 3D labyrintů a zásuvkových organizérů. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo 3D tisk.
+Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových organizérů a CNC šablon. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo výrobu.
 
 **Webová aplikace:** [omni944.github.io/labyrinth-forge](https://omni944.github.io/labyrinth-forge/)
 
@@ -22,6 +22,14 @@ Webová aplikace pro parametrické generování 3D labyrintů a zásuvkových or
 - nastavitelná tloušťka stěn, dna a poloměr rohů,
 - export celé sestavy do GLB,
 - export jednotlivých tisknutelných přihrádek jako STL soubory v ZIP balíčku.
+
+### CNC šablony a přípravky
+
+- univerzální vrtací mřížky,
+- šablony pro policové kolíky se systémovou roztečí 32 mm,
+- radiusové frézovací šablony s montážními otvory,
+- přesný 2D export DXF v milimetrech s vrstvami `OUTLINE` a `DRILLING`,
+- 3D export STL a GLB.
 
 ## Spuštění
 
