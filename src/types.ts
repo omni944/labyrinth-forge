@@ -1,4 +1,6 @@
 export type MazeStyle = 'classic' | 'braided' | 'rooms'
+export type GeneratorMode = 'maze' | 'organizer'
+export type OrganizerLayout = 'grid' | 'recursive'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -33,4 +35,29 @@ export interface MazeGeometryData {
   width: number
   depth: number
   walls: WallSegment[]
+}
+
+export interface OrganizerSettings {
+  drawerWidth: number
+  drawerDepth: number
+  binHeight: number
+  wallThickness: number
+  bottomThickness: number
+  cornerRadius: number
+  outerGap: number
+  innerGap: number
+  layout: OrganizerLayout
+  rows: number
+  columns: number
+  iterations: number
+  widthSplit: number
+  depthSplit: number
+}
+
+export interface OrganizerBin {
+  id: number
+  x: number
+  z: number
+  width: number
+  depth: number
 }

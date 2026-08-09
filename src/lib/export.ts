@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
-import type { MazeGeometryData, MazeSettings } from '../types'
+import JSZip from 'jszip'
+import type { MazeGeometryData, MazeSettings, OrganizerBin, OrganizerSettings } from '../types'
+import { createBinGroup, disposeObject } from './organizer'
 
 function buildExportGroup(data: MazeGeometryData, settings: MazeSettings) {
   const group = new THREE.Group()
@@ -58,5 +60,31 @@ export async function exportGLB(data: MazeGeometryData, settings: MazeSettings) 
     download(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' }), `labyrinth-${settings.seed}.glb`)
   } finally {
     disposeGroup(group)
+  }
+}
+
+export async function exportOrganizerSTL(bins: OrganizerBin[], settings: OrganizerSettings) {
+  const zip = new JSZip()
+  const exporter = new STLExporter()
+  for (const bin of bins) {
+    const group = createBinGroup(bin, settings, true)
+    const result = exporter.parse(group, { binary: true })
+    const bytes = new Uint8Array(result.buffer, result.byteOffset, result.byteLength)
+    zip.file(`prihradka-${String(bin.id).padStart(2, '0')}-${Math.round(bin.width)}x${Math.round(bin.depth)}mm.stl`, bytes)
+    disposeObject(group)
+  }
+  const archive = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  download(archive, `organizery-${Math.round(settings.drawerWidth)}x${Math.round(settings.drawerDepth)}mm.zip`)
+}
+
+export async function exportOrganizerGLB(bins: OrganizerBin[], settings: OrganizerSettings) {
+  const group = new THREE.Group()
+  bins.forEach((bin) => group.add(createBinGroup(bin, settings)))
+  group.updateMatrixWorld(true)
+  try {
+    const result = await new GLTFExporter().parseAsync(group, { binary: true, onlyVisible: true })
+    download(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' }), 'zasuvkovy-organizer.glb')
+  } finally {
+    disposeObject(group)
   }
 }

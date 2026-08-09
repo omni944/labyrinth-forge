@@ -1,6 +1,6 @@
 # Labyrinth Forge
 
-Webová aplikace pro parametrické generování 3D labyrintů. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo 3D tisk.
+Webová aplikace pro parametrické generování 3D labyrintů a zásuvkových organizérů. Vše běží lokálně v prohlížeči: změny parametrů se ihned promítnou do 3D náhledu a hotový model lze stáhnout pro další zpracování nebo 3D tisk.
 
 ## Funkce
 
@@ -11,6 +11,15 @@ Webová aplikace pro parametrické generování 3D labyrintů. Vše běží lok�
 - export do binárního STL a GLB,
 - rozměry v milimetrech vhodné pro přípravu 3D tisku,
 - responzivní webové rozhraní.
+
+### Zásuvkové organizéry
+
+- rozměry zásuvky, výška přihrádek a tiskové vůle,
+- pravidelná mřížka nebo asymetrické rekurzivní dělení,
+- samostatné duté přihrádky se zaoblenými rohy,
+- nastavitelná tloušťka stěn, dna a poloměr rohů,
+- export celé sestavy do GLB,
+- export jednotlivých tisknutelných přihrádek jako STL soubory v ZIP balíčku.
 
 ## Spuštění
 
