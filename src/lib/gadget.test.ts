@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { build3MFModelXML } from './export'
-import { buildGadgetDXF, buildGadgetSVG, createGadgetGroup, generateGadget } from './gadget'
+import { buildGadgetDXF, buildGadgetSVG, createGadgetGroup, generateGadget, normalizeOrnamentName } from './gadget'
 import type { GadgetSettings } from '../types'
 
 const settings: GadgetSettings = {
@@ -33,6 +33,10 @@ const settings: GadgetSettings = {
   skadisSlotHeight: 15,
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
+  ornamentName: 'ANNA',
+  ornamentStyle: 'round',
+  ornamentRelief: 1.4,
+  ornamentHangingHole: 5,
 }
 
 describe('generateGadget', () => {
@@ -100,6 +104,30 @@ describe('generateGadget', () => {
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-plocha')).toBe(true)
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-celo')).toBe(true)
     expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
+  })
+
+  it('ozdoba vytvoří tělo, otvor na zavěšení a vystouplé vektorové jméno', () => {
+    const data = generateGadget({ ...settings, type: 'name-ornament', gadgetWidth: 90, materialThickness: 3, ornamentName: 'Eliška' })
+    expect(data.layout).toBe('assembled')
+    expect(data.parts[0].name).toBe('ozdoba-obrys')
+    expect(data.parts[0].holes[0].diameter).toBe(settings.ornamentHangingHole)
+    expect(data.parts.some((part) => part.operation === 'engrave')).toBe(true)
+    expect(data.height).toBe(3 + settings.ornamentRelief)
+  })
+
+  it('jméno pro vestavěný vektorový font bezpečně normalizuje diakritiku a délku', () => {
+    expect(normalizeOrnamentName('  Eliška 2026! ')).toBe('ELISKA 2026')
+    expect(normalizeOrnamentName('')).toBe('ANNA')
+    expect(normalizeOrnamentName('abcdefghijklmnop')).toHaveLength(14)
+  })
+
+  it('SVG a DXF ozdoby zachovají sestavení a oddělí gravírování jména', () => {
+    const data = generateGadget({ ...settings, type: 'name-ornament' })
+    const svg = buildGadgetSVG(data)
+    const dxf = buildGadgetDXF(data)
+    expect(svg).toContain('class="engraving"')
+    expect(svg).toContain('stroke:#1677ff')
+    expect(dxf).toContain('_ENGRAVING')
   })
 
   it('DXF stojánku rozloží jednotlivé díly do samostatných vrstev', () => {

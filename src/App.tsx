@@ -99,6 +99,10 @@ const INITIAL_GADGET_SETTINGS: GadgetSettings = {
   skadisSlotHeight: 15,
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
+  ornamentName: 'ANNA',
+  ornamentStyle: 'round',
+  ornamentRelief: 1.4,
+  ornamentHangingHole: 5,
 }
 
 function App() {
@@ -164,6 +168,8 @@ function App() {
                     ? { materialThickness: 4, gadgetWidth: 100, gadgetDepth: 55, toolColumns: 4, toolHoleDiameter: 18, toolMargin: 14, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4 }
                     : type === 'skadis-shelf'
                       ? { materialThickness: 4, gadgetWidth: 140, gadgetDepth: 80, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4 }
+                      : type === 'name-ornament'
+                        ? { materialThickness: 3, gadgetWidth: 90, gadgetDepth: 90, ornamentName: 'ANNA', ornamentStyle: 'round', ornamentRelief: 1.4, ornamentHangingHole: 5 }
                       : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
       setGadgetSettings((current) => ({ ...current, ...preset, type }))
       return
@@ -303,7 +309,7 @@ function App() {
           <div className="metric">
             {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : <Gamepad2 size={16} />}
             <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : 'Gadget'}</span>
-            <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : gadgetSettings.type.startsWith('skadis-') ? '1 tisknutelný model' : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
+            <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type === 'name-ornament' ? '1 tisknutelný model' : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
           </div>
           <div className="metric">
             <Ruler size={16} />

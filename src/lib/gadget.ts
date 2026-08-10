@@ -1,5 +1,9 @@
 import * as THREE from 'three'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import helvetikerBold from 'three/examples/fonts/helvetiker_bold.typeface.json'
 import type { GadgetGeometryData, GadgetPart, GadgetPrimitive, GadgetSettings, TemplateHole, TemplatePoint } from '../types'
+
+const ornamentFont = new FontLoader().parse(helvetikerBold)
 
 function rectangle(width: number, depth: number, centerZ = 0): TemplatePoint[] {
   return [
@@ -12,6 +16,25 @@ function rectangle(width: number, depth: number, centerZ = 0): TemplatePoint[] {
 
 function basePart(name: string, outline: TemplatePoint[], thickness: number): GadgetPart {
   return { name, outline, holes: [], cutouts: [], thickness, position: [0, 0, 0], rotation: [0, 0, 0] }
+}
+
+function radialOutline(radius: number, count: number, innerRatio = 1): TemplatePoint[] {
+  return Array.from({ length: count }, (_, index) => {
+    const pointRadius = index % 2 === 0 ? radius : radius * innerRatio
+    const angle = Math.PI / 2 - (index / count) * Math.PI * 2
+    return { x: Math.cos(angle) * pointRadius, z: Math.sin(angle) * pointRadius }
+  })
+}
+
+export function normalizeOrnamentName(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 &-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 14) || 'ANNA'
 }
 
 function cableComb(settings: GadgetSettings): GadgetGeometryData {
@@ -292,6 +315,62 @@ function skadisShelf(settings: GadgetSettings): GadgetGeometryData {
   }
 }
 
+function nameOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const size = settings.gadgetWidth
+  const radius = size / 2
+  const outline = settings.ornamentStyle === 'star'
+    ? radialOutline(radius, 10, 0.54)
+    : settings.ornamentStyle === 'hexagon'
+      ? radialOutline(radius, 6)
+      : radialOutline(radius, 72)
+  const body = basePart('ozdoba-obrys', outline, settings.materialThickness)
+  body.holes.push({
+    x: 0,
+    z: settings.ornamentStyle === 'star' ? radius * 0.68 : radius * 0.72,
+    diameter: settings.ornamentHangingHole,
+  })
+
+  const name = normalizeOrnamentName(settings.ornamentName)
+  const shapes = ornamentFont.generateShapes(name, 100)
+  const sampled = shapes.map((shape) => ({
+    outline: shape.getPoints(8),
+    holes: shape.holes.map((hole) => hole.getPoints(8)),
+  }))
+  const points = sampled.flatMap((shape) => shape.outline)
+  const minX = Math.min(...points.map((point) => point.x))
+  const maxX = Math.max(...points.map((point) => point.x))
+  const minZ = Math.min(...points.map((point) => point.y))
+  const maxZ = Math.max(...points.map((point) => point.y))
+  const rawWidth = Math.max(1, maxX - minX)
+  const rawHeight = Math.max(1, maxZ - minZ)
+  const scale = Math.min((size * 0.76) / rawWidth, (size * 0.24) / rawHeight)
+  const centerX = (minX + maxX) / 2
+  const centerZ = (minZ + maxZ) / 2
+  const textCenterZ = -size * 0.06
+  const reliefOverlap = Math.min(0.4, settings.ornamentRelief / 2)
+  const textParts = sampled.map((shape, index): GadgetPart => ({
+    name: `jmeno-${index + 1}`,
+    outline: shape.outline.map((point) => ({ x: (point.x - centerX) * scale, z: (point.y - centerZ) * scale + textCenterZ })),
+    holes: [],
+    cutouts: shape.holes.map((hole) => ({
+      outline: hole.map((point) => ({ x: (point.x - centerX) * scale, z: (point.y - centerZ) * scale + textCenterZ })),
+    })),
+    thickness: settings.ornamentRelief + reliefOverlap,
+    position: [0, settings.materialThickness - reliefOverlap, 0],
+    rotation: [0, 0, 0],
+    operation: 'engrave',
+  }))
+
+  return {
+    parts: [body, ...textParts],
+    primitives: [],
+    width: size,
+    depth: size,
+    height: settings.materialThickness + settings.ornamentRelief,
+    layout: 'assembled',
+  }
+}
+
 export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
   if (settings.type === 'cable-comb') return cableComb(settings)
   if (settings.type === 'tool-rack') return toolRack(settings)
@@ -301,7 +380,8 @@ export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
   if (settings.type === 'headphone-stand') return headphoneStand(settings)
   if (settings.type === 'skadis-hook') return skadisHook(settings)
   if (settings.type === 'skadis-tool-holder') return skadisToolHolder(settings)
-  return skadisShelf(settings)
+  if (settings.type === 'skadis-shelf') return skadisShelf(settings)
+  return nameOrnament(settings)
 }
 
 function pathFromOutline(outline: TemplatePoint[]) {
@@ -374,18 +454,25 @@ function bounds(outline: TemplatePoint[]) {
 export function buildGadgetDXF(data: GadgetGeometryData) {
   let dxf = pair(0, 'SECTION') + pair(2, 'HEADER') + pair(9, '$INSUNITS') + pair(70, 4)
   dxf += pair(0, 'ENDSEC') + pair(0, 'SECTION') + pair(2, 'ENTITIES')
+  const assembledPoints = data.layout === 'assembled'
+    ? data.parts.flatMap((part) => part.outline.map((point) => ({ x: point.x + part.position[0], z: point.z + part.position[2] })))
+    : []
+  const assembledMinX = assembledPoints.length ? Math.min(...assembledPoints.map((point) => point.x)) : 0
+  const assembledMinZ = assembledPoints.length ? Math.min(...assembledPoints.map((point) => point.z)) : 0
   let cursorX = 0
   data.parts.forEach((part) => {
     const box = bounds(part.outline)
-    const offsetX = cursorX - box.minX
-    const offsetZ = -box.minZ
+    const offsetX = data.layout === 'assembled' ? part.position[0] - assembledMinX : cursorX - box.minX
+    const offsetZ = data.layout === 'assembled' ? part.position[2] - assembledMinZ : -box.minZ
     const layer = part.name.toUpperCase().replaceAll('-', '_')
-    dxf += pair(0, 'LWPOLYLINE') + pair(8, `${layer}_OUTLINE`) + pair(90, part.outline.length) + pair(70, 1)
+    const operationLayer = part.operation === 'engrave' ? `${layer}_ENGRAVING` : `${layer}_OUTLINE`
+    dxf += pair(0, 'LWPOLYLINE') + pair(8, operationLayer) + pair(90, part.outline.length) + pair(70, 1)
     part.outline.forEach((point) => {
       dxf += pair(10, (point.x + offsetX).toFixed(4)) + pair(20, (point.z + offsetZ).toFixed(4))
     })
     part.cutouts.forEach((cutout) => {
-      dxf += pair(0, 'LWPOLYLINE') + pair(8, `${layer}_CUTOUTS`) + pair(90, cutout.outline.length) + pair(70, 1)
+      const cutoutLayer = part.operation === 'engrave' ? `${layer}_ENGRAVING` : `${layer}_CUTOUTS`
+      dxf += pair(0, 'LWPOLYLINE') + pair(8, cutoutLayer) + pair(90, cutout.outline.length) + pair(70, 1)
       cutout.outline.forEach((point) => {
         dxf += pair(10, (point.x + offsetX).toFixed(4)) + pair(20, (point.z + offsetZ).toFixed(4))
       })
@@ -394,7 +481,7 @@ export function buildGadgetDXF(data: GadgetGeometryData) {
       dxf += pair(0, 'CIRCLE') + pair(8, `${layer}_DRILLING`)
       dxf += pair(10, (hole.x + offsetX).toFixed(4)) + pair(20, (hole.z + offsetZ).toFixed(4)) + pair(40, (hole.diameter / 2).toFixed(4))
     })
-    cursorX += box.maxX - box.minX + 20
+    if (data.layout !== 'assembled') cursorX += box.maxX - box.minX + 20
   })
   return dxf + pair(0, 'ENDSEC') + pair(0, 'EOF')
 }
@@ -404,24 +491,32 @@ function svgPath(outline: TemplatePoint[], offsetX: number, offsetZ: number) {
 }
 
 export function buildGadgetSVG(data: GadgetGeometryData) {
+  const assembledPoints = data.layout === 'assembled'
+    ? data.parts.flatMap((part) => part.outline.map((point) => ({ x: point.x + part.position[0], z: point.z + part.position[2] })))
+    : []
+  const assembledMinX = assembledPoints.length ? Math.min(...assembledPoints.map((point) => point.x)) : 0
+  const assembledMaxX = assembledPoints.length ? Math.max(...assembledPoints.map((point) => point.x)) : 0
+  const assembledMinZ = assembledPoints.length ? Math.min(...assembledPoints.map((point) => point.z)) : 0
+  const assembledMaxZ = assembledPoints.length ? Math.max(...assembledPoints.map((point) => point.z)) : 0
   let cursorX = 0
   let maxDepth = 0
   const elements: string[] = []
   data.parts.forEach((part) => {
     const box = bounds(part.outline)
-    const offsetX = cursorX - box.minX
-    const offsetZ = -box.minZ
+    const offsetX = data.layout === 'assembled' ? part.position[0] - assembledMinX : cursorX - box.minX
+    const offsetZ = data.layout === 'assembled' ? part.position[2] - assembledMinZ : -box.minZ
     const layer = part.name.toUpperCase().replaceAll('-', '_')
-    elements.push(`<g id="${layer}"><path class="outline" d="${svgPath(part.outline, offsetX, offsetZ)}"/>`)
-    part.cutouts.forEach((cutout) => elements.push(`<path class="cutout" d="${svgPath(cutout.outline, offsetX, offsetZ)}"/>`))
+    const operationClass = part.operation === 'engrave' ? 'engraving' : 'outline'
+    elements.push(`<g id="${layer}"><path class="${operationClass}" d="${svgPath(part.outline, offsetX, offsetZ)}"/>`)
+    part.cutouts.forEach((cutout) => elements.push(`<path class="${part.operation === 'engrave' ? 'engraving' : 'cutout'}" d="${svgPath(cutout.outline, offsetX, offsetZ)}"/>`))
     part.holes.forEach((hole) => elements.push(`<circle class="drilling" cx="${(hole.x + offsetX).toFixed(4)}" cy="${(hole.z + offsetZ).toFixed(4)}" r="${(hole.diameter / 2).toFixed(4)}"/>`))
     elements.push('</g>')
-    cursorX += box.maxX - box.minX + 20
-    maxDepth = Math.max(maxDepth, box.maxZ - box.minZ)
+    if (data.layout !== 'assembled') cursorX += box.maxX - box.minX + 20
+    maxDepth = data.layout === 'assembled' ? assembledMaxZ - assembledMinZ : Math.max(maxDepth, box.maxZ - box.minZ)
   })
-  const width = Math.max(1, cursorX - 20)
+  const width = Math.max(1, data.layout === 'assembled' ? assembledMaxX - assembledMinX : cursorX - 20)
   const depth = Math.max(1, maxDepth)
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(4)}mm" height="${depth.toFixed(4)}mm" viewBox="0 0 ${width.toFixed(4)} ${depth.toFixed(4)}"><style>.outline,.cutout,.drilling{fill:none;stroke:#000;stroke-width:.2}</style>${elements.join('')}</svg>`
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(4)}mm" height="${depth.toFixed(4)}mm" viewBox="0 0 ${width.toFixed(4)} ${depth.toFixed(4)}"><style>.outline,.cutout,.drilling,.engraving{fill:none;stroke-width:.2}.outline,.cutout,.drilling{stroke:#000}.engraving{stroke:#1677ff}</style>${elements.join('')}</svg>`
 }
 
 export function downloadGadgetDXF(data: GadgetGeometryData, settings: GadgetSettings) {
