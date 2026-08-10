@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import helvetikerBold from 'three/examples/fonts/helvetiker_bold.typeface.json'
 import polygonClipping, { type MultiPolygon, type Polygon } from 'polygon-clipping'
 import type { GadgetGeometryData, GadgetPart, GadgetPrimitive, GadgetSettings, TemplateHole, TemplatePoint } from '../types'
@@ -275,12 +276,20 @@ function headphoneStand(settings: GadgetSettings): GadgetGeometryData {
   }
 }
 
-function boxPrimitive(name: string, size: [number, number, number], position: [number, number, number]): GadgetPrimitive {
-  return { name, kind: 'box', size, position, rotation: [0, 0, 0] }
+function boxPrimitive(name: string, size: [number, number, number], position: [number, number, number], edgeRadius = 0): GadgetPrimitive {
+  return { name, kind: 'box', size, position, rotation: [0, 0, 0], edgeRadius }
 }
 
 function profilePrimitive(name: string, outline: TemplatePoint[], extrusion: number, position: [number, number, number]): GadgetPrimitive {
   return { name, kind: 'profile', outline, extrusion, position, rotation: [0, 0, 0] }
+}
+
+function cylinderPrimitive(name: string, radius: number, height: number, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]): GadgetPrimitive {
+  return { name, kind: 'cylinder', radius, height, position, rotation }
+}
+
+function bodyEdgeRadius(settings: GadgetSettings) {
+  return settings.type === 'skadis-hook' ? 0 : Math.max(0, settings.skadisEdgeRadius)
 }
 
 function skadisMount(settings: GadgetSettings, width: number, mountCount: 1 | 2) {
@@ -296,7 +305,7 @@ function skadisMount(settings: GadgetSettings, width: number, mountCount: 1 | 2)
   const mountSpacing = Math.min(settings.skadisMountSpacing, Math.max(20, width - connectorWidth - 8))
   const xValues = mountCount === 1 ? [0] : [-mountSpacing / 2, mountSpacing / 2]
   const primitives: GadgetPrimitive[] = [
-    boxPrimitive('skadis-predni-deska', [width, bodyHeight, settings.materialThickness], [0, bodyHeight / 2, settings.materialThickness / 2]),
+    boxPrimitive('skadis-predni-deska', [width, bodyHeight, settings.materialThickness], [0, bodyHeight / 2, settings.materialThickness / 2], bodyEdgeRadius(settings)),
   ]
   xValues.forEach((x, index) => {
     const hookProfile: TemplatePoint[] = [
@@ -344,6 +353,7 @@ function skadisToolHolder(settings: GadgetSettings): GadgetGeometryData {
     ? [0]
     : Array.from({ length: settings.toolColumns }, (_, index) => -usableWidth / 2 + (index / (settings.toolColumns - 1)) * usableWidth)
   shelf.holes = xValues.map((x) => ({ x, z: 0, diameter: settings.toolHoleDiameter }))
+  shelf.edgeRadius = bodyEdgeRadius(settings)
   shelf.position = [0, Math.max(settings.materialThickness, mount.bodyHeight * 0.34), settings.materialThickness + settings.gadgetDepth / 2 - 0.5]
   return {
     parts: [shelf],
@@ -359,9 +369,126 @@ function skadisShelf(settings: GadgetSettings): GadgetGeometryData {
   const shelfY = Math.max(settings.materialThickness / 2, mount.bodyHeight * 0.28)
   const lipHeight = Math.max(12, settings.materialThickness * 3)
   mount.primitives.push(
-    boxPrimitive('skadis-policka-plocha', [settings.gadgetWidth, settings.materialThickness, settings.gadgetDepth], [0, shelfY, settings.materialThickness + settings.gadgetDepth / 2 - 0.5]),
-    boxPrimitive('skadis-policka-celo', [settings.gadgetWidth, lipHeight, settings.materialThickness], [0, shelfY + lipHeight / 2 - settings.materialThickness / 2, settings.materialThickness + settings.gadgetDepth - settings.materialThickness / 2 - 0.5]),
+    boxPrimitive('skadis-policka-plocha', [settings.gadgetWidth, settings.materialThickness, settings.gadgetDepth], [0, shelfY, settings.materialThickness + settings.gadgetDepth / 2 - 0.5], bodyEdgeRadius(settings)),
+    boxPrimitive('skadis-policka-celo', [settings.gadgetWidth, lipHeight, settings.materialThickness], [0, shelfY + lipHeight / 2 - settings.materialThickness / 2, settings.materialThickness + settings.gadgetDepth - settings.materialThickness / 2 - 0.5], bodyEdgeRadius(settings)),
   )
+  return {
+    parts: [],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
+  }
+}
+
+function skadisContainer(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const radius = bodyEdgeRadius(settings)
+  const wall = settings.materialThickness
+  const containerHeight = Math.max(34, Math.min(70, settings.gadgetDepth * 0.7))
+  const floorY = Math.max(wall / 2, mount.bodyHeight * 0.16)
+  const wallY = floorY + containerHeight / 2 - wall / 2
+  const centerZ = wall + settings.gadgetDepth / 2 - 0.5
+  const frontZ = wall + settings.gadgetDepth - wall / 2 - 0.5
+  mount.primitives.push(
+    boxPrimitive('skadis-box-dno', [settings.gadgetWidth, wall, settings.gadgetDepth], [0, floorY, centerZ], radius),
+    boxPrimitive('skadis-box-celo', [settings.gadgetWidth, containerHeight, wall], [0, wallY, frontZ], radius),
+    boxPrimitive('skadis-box-bok-levy', [wall, containerHeight, settings.gadgetDepth], [-(settings.gadgetWidth - wall) / 2, wallY, centerZ], radius),
+    boxPrimitive('skadis-box-bok-pravy', [wall, containerHeight, settings.gadgetDepth], [(settings.gadgetWidth - wall) / 2, wallY, centerZ], radius),
+  )
+  return {
+    parts: [],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + wall + settings.gadgetDepth,
+    height: Math.max(mount.bodyHeight, floorY + containerHeight),
+  }
+}
+
+function skadisPliersHolder(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const halfWidth = settings.gadgetWidth / 2
+  const halfDepth = settings.gadgetDepth / 2
+  const slotCount = Math.max(1, settings.toolColumns)
+  const usableWidth = Math.max(0, settings.gadgetWidth - settings.toolMargin * 2)
+  const centers = Array.from({ length: slotCount }, (_, index) =>
+    slotCount === 1 ? 0 : -usableWidth / 2 + (index / (slotCount - 1)) * usableWidth,
+  ).sort((a, b) => b - a)
+  const outline: TemplatePoint[] = [
+    { x: -halfWidth, z: -halfDepth },
+    { x: halfWidth, z: -halfDepth },
+    { x: halfWidth, z: halfDepth },
+  ]
+  const slotSpacing = slotCount > 1 ? usableWidth / (slotCount - 1) : settings.gadgetWidth - settings.toolMargin * 2
+  const halfSlot = Math.max(1, Math.min(settings.toolHoleDiameter, slotSpacing * 0.72) / 2)
+  centers.forEach((center) => {
+    outline.push(
+      { x: center + halfSlot, z: halfDepth },
+      { x: center + halfSlot, z: -halfDepth * 0.25 },
+      { x: center - halfSlot, z: -halfDepth * 0.25 },
+      { x: center - halfSlot, z: halfDepth },
+    )
+  })
+  outline.push({ x: -halfWidth, z: halfDepth })
+  const cradle = basePart('skadis-drzak-klesti', outline, settings.materialThickness)
+  cradle.edgeRadius = bodyEdgeRadius(settings)
+  cradle.position = [0, Math.max(settings.materialThickness, mount.bodyHeight * 0.34), settings.materialThickness + settings.gadgetDepth / 2 - 0.5]
+  return {
+    parts: [cradle],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
+  }
+}
+
+function skadisDrillBitHolder(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const xStart = -settings.gadgetWidth / 2 + settings.toolMargin
+  const xEnd = settings.gadgetWidth / 2 - settings.toolMargin
+  const zStart = -settings.gadgetDepth / 2 + settings.toolMargin
+  const zEnd = settings.gadgetDepth / 2 - settings.toolMargin
+  const positions = (count: number, start: number, end: number) => count === 1
+    ? [(start + end) / 2]
+    : Array.from({ length: count }, (_, index) => start + (index / (count - 1)) * (end - start))
+  const holes = positions(settings.toolRows, zStart, zEnd).flatMap((z) =>
+    positions(settings.toolColumns, xStart, xEnd).map((x): TemplateHole => ({ x, z, diameter: settings.toolHoleDiameter })),
+  )
+  const shelfY = Math.max(settings.materialThickness, mount.bodyHeight * 0.38)
+  const shelves = [shelfY, Math.max(settings.materialThickness, shelfY - 14)].map((y, index) => {
+    const shelf = basePart(`skadis-vrtaky-${index === 0 ? 'horni' : 'vodici'}`, rectangle(settings.gadgetWidth, settings.gadgetDepth), settings.materialThickness)
+    shelf.holes = holes
+    shelf.edgeRadius = bodyEdgeRadius(settings)
+    shelf.position = [0, y, settings.materialThickness + settings.gadgetDepth / 2 - 0.5]
+    return shelf
+  })
+  return {
+    parts: shelves,
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
+  }
+}
+
+function skadisSpoolHolder(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const count = Math.max(1, Math.min(4, settings.toolColumns))
+  const radius = Math.max(2.5, settings.materialThickness * 0.75)
+  const stopRadius = radius + Math.max(2, settings.materialThickness * 0.5)
+  const usableWidth = Math.max(0, settings.gadgetWidth - settings.toolMargin * 2)
+  const xValues = count === 1
+    ? [0]
+    : Array.from({ length: count }, (_, index) => -usableWidth / 2 + (index / (count - 1)) * usableWidth)
+  const centerY = Math.max(stopRadius + 5, mount.bodyHeight * 0.48)
+  const centerZ = settings.materialThickness + settings.gadgetDepth / 2 - 0.5
+  const frontZ = settings.materialThickness + settings.gadgetDepth - 0.5
+  xValues.forEach((x, index) => {
+    mount.primitives.push(
+      cylinderPrimitive(`skadis-civka-trn-${index + 1}`, radius, settings.gadgetDepth, [x, centerY, centerZ], [Math.PI / 2, 0, 0]),
+      cylinderPrimitive(`skadis-civka-doraz-${index + 1}`, stopRadius, Math.max(2, settings.materialThickness * 0.6), [x, centerY, frontZ], [Math.PI / 2, 0, 0]),
+    )
+  })
   return {
     parts: [],
     primitives: mount.primitives,
@@ -637,6 +764,10 @@ export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
   if (settings.type === 'skadis-hook') return skadisHook(settings)
   if (settings.type === 'skadis-tool-holder') return skadisToolHolder(settings)
   if (settings.type === 'skadis-shelf') return skadisShelf(settings)
+  if (settings.type === 'skadis-container') return skadisContainer(settings)
+  if (settings.type === 'skadis-pliers-holder') return skadisPliersHolder(settings)
+  if (settings.type === 'skadis-drill-bit-holder') return skadisDrillBitHolder(settings)
+  if (settings.type === 'skadis-spool-holder') return skadisSpoolHolder(settings)
   return nameOrnament(settings)
 }
 
@@ -659,7 +790,20 @@ export function createGadgetPartGeometry(part: GadgetPart) {
     shape.holes.push(path)
   })
   part.cutouts.forEach((cutout) => shape.holes.push(pathFromOutline(cutout.outline)))
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: part.thickness, bevelEnabled: false, curveSegments: 20, steps: 1 })
+  const smallestHoleBevel = part.holes.length > 0
+    ? Math.min(...part.holes.map((hole) => hole.diameter * 0.25))
+    : Number.POSITIVE_INFINITY
+  const edgeRadius = Math.min(Math.max(0, part.edgeRadius ?? 0), part.thickness * 0.45, smallestHoleBevel)
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: part.thickness,
+    bevelEnabled: edgeRadius > 0,
+    bevelSegments: edgeRadius > 0 ? 3 : 1,
+    bevelSize: edgeRadius,
+    bevelThickness: edgeRadius,
+    bevelOffset: -edgeRadius,
+    curveSegments: 20,
+    steps: 1,
+  })
   geometry.rotateX(-Math.PI / 2)
   geometry.computeVertexNormals()
   return geometry
@@ -682,8 +826,11 @@ export function createGadgetGroup(data: GadgetGeometryData) {
   data.primitives.forEach((primitive, index) => {
     let geometry: THREE.BufferGeometry
     if (primitive.kind === 'box') {
-      geometry = new THREE.BoxGeometry(...primitive.size)
-    } else {
+      const radius = Math.min(Math.max(0, primitive.edgeRadius ?? 0), ...primitive.size.map((value) => value * 0.45))
+      geometry = radius > 0
+        ? new RoundedBoxGeometry(...primitive.size, 3, radius)
+        : new THREE.BoxGeometry(...primitive.size)
+    } else if (primitive.kind === 'profile') {
       const shape = new THREE.Shape()
       shape.moveTo(primitive.outline[0].x, primitive.outline[0].z)
       primitive.outline.slice(1).forEach((point) => shape.lineTo(point.x, point.z))
@@ -692,6 +839,8 @@ export function createGadgetGroup(data: GadgetGeometryData) {
       geometry.rotateY(-Math.PI / 2)
       geometry.translate(primitive.extrusion / 2, 0, 0)
       geometry.computeVertexNormals()
+    } else {
+      geometry = new THREE.CylinderGeometry(primitive.radius, primitive.radius, primitive.height, 32)
     }
     const material = new THREE.MeshStandardMaterial({ color: colors[(data.parts.length + index) % colors.length], roughness: 0.62 })
     const mesh = new THREE.Mesh(geometry, material)

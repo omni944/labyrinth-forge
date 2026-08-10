@@ -34,6 +34,7 @@ const settings: GadgetSettings = {
   skadisSlotHeight: 15,
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
+  skadisEdgeRadius: 2,
   ornamentName: 'ANNA',
   ornamentStyle: 'snowflake',
   ornamentFrameWidth: 5,
@@ -112,6 +113,48 @@ describe('generateGadget', () => {
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-plocha')).toBe(true)
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-celo')).toBe(true)
     expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-nosny-hak-'))).toHaveLength(2)
+  })
+
+  it('SKÅDIS box vytvoří otevřený zásobník se dnem, čelem a bočnicemi', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-container' })
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-box-dno')).toBe(true)
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-box-celo')).toBe(true)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-box-bok-'))).toHaveLength(2)
+  })
+
+  it('SKÅDIS držák kleští vytvoří požadovaný počet otevřených drážek', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-pliers-holder', toolColumns: 3 })
+    expect(data.parts).toHaveLength(1)
+    expect(data.parts[0].outline).toHaveLength(4 + 3 * 4)
+  })
+
+  it('SKÅDIS držák vrtáků vytvoří dvě desky se stejným rastrem otvorů', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-drill-bit-holder', toolRows: 3, toolColumns: 7 })
+    expect(data.parts).toHaveLength(2)
+    expect(data.parts[0].holes).toHaveLength(21)
+    expect(data.parts[1].holes).toEqual(data.parts[0].holes)
+  })
+
+  it('SKÅDIS držák cívek vytvoří trn a doraz pro každou cívku', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-spool-holder', toolColumns: 2 })
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-civka-trn-'))).toHaveLength(2)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-civka-doraz-'))).toHaveLength(2)
+    const group = createGadgetGroup(data)
+    const axle = group.getObjectByName('skadis-civka-trn-1') as THREE.Mesh | undefined
+    expect(axle?.geometry.getAttribute('position').count).toBeGreaterThan(100)
+  })
+
+  it('zaoblení se aplikuje na tělo držáku, ale nikdy na J-háky', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-container', skadisEdgeRadius: 3 })
+    const body = data.primitives.find((primitive) => primitive.name === 'skadis-predni-deska')
+    const hook = data.primitives.find((primitive) => primitive.name === 'skadis-nosny-hak-1')
+    expect(body?.kind === 'box' && body.edgeRadius).toBe(3)
+    expect(hook?.kind).toBe('profile')
+    expect(createGadgetGroup(data).getObjectByName('skadis-predni-deska')).toBeDefined()
+
+    const standaloneHook = generateGadget({ ...settings, type: 'skadis-hook', skadisEdgeRadius: 6 })
+    const hookBody = standaloneHook.primitives.find((primitive) => primitive.name === 'skadis-predni-deska')
+    expect(hookBody?.kind === 'box' && hookBody.edgeRadius).toBe(0)
   })
 
   it('profil J-háku se převede na uzavřenou exportovatelnou 3D geometrii', () => {

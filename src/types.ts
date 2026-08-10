@@ -14,6 +14,10 @@ export type GadgetType =
   | 'skadis-hook'
   | 'skadis-tool-holder'
   | 'skadis-shelf'
+  | 'skadis-container'
+  | 'skadis-pliers-holder'
+  | 'skadis-drill-bit-holder'
+  | 'skadis-spool-holder'
   | 'name-ornament'
 
 export type OrnamentStyle = 'snowflake' | 'trees' | 'bells' | 'reindeer' | 'village' | 'holly' | 'angel' | 'gifts'
@@ -161,6 +165,7 @@ export interface GadgetSettings {
   skadisSlotHeight: number
   skadisMountSpacing: number
   skadisBackClearance: number
+  skadisEdgeRadius: number
   ornamentName: string
   ornamentStyle: OrnamentStyle
   ornamentFrameWidth: number
@@ -180,6 +185,7 @@ export interface GadgetPart {
   thickness: number
   position: [number, number, number]
   rotation: [number, number, number]
+  edgeRadius?: number
   operation?: 'cut' | 'engrave'
 }
 
@@ -189,11 +195,19 @@ export type GadgetPrimitive = {
   size: [number, number, number]
   position: [number, number, number]
   rotation: [number, number, number]
+  edgeRadius?: number
 } | {
   name: string
   kind: 'profile'
   outline: TemplatePoint[]
   extrusion: number
+  position: [number, number, number]
+  rotation: [number, number, number]
+} | {
+  name: string
+  kind: 'cylinder'
+  radius: number
+  height: number
   position: [number, number, number]
   rotation: [number, number, number]
 }
