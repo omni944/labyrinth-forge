@@ -12,7 +12,9 @@ interface Props {
   exporting: string | null
 }
 
-const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; name: string; description: string }> }> = [
+type GadgetTypeSection = { name: string; types: Array<{ value: GadgetType; name: string; description: string }> }
+
+const GADGET_TYPE_SECTIONS: GadgetTypeSection[] = [
   { name: 'Dílna a organizace', types: [
     { value: 'cable-comb', name: 'Kabelový hřeben', description: 'Organizér nabíjecích a datových kabelů' },
     { value: 'tool-rack', name: 'Stojan na nástroje', description: 'Rastr otvorů pro vrtáky, frézy nebo pera' },
@@ -23,6 +25,9 @@ const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; nam
     { value: 'phone-stand', name: 'Stojánek na telefon', description: 'Skládací základna a šikmá opěrka' },
     { value: 'headphone-stand', name: 'Stojan na sluchátka', description: 'Dvoudílný stojan se širokou horní opěrkou' },
   ] },
+]
+
+const SKADIS_TYPE_SECTIONS: GadgetTypeSection[] = [
   { name: 'SKÅDIS doplňky', types: [
     { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Nosný J-hák se spodním stabilizačním kolíkem' },
     { value: 'skadis-tool-holder', name: 'SKÅDIS držák šroubováků', description: 'Jedna řada otvorů pro šroubováky, pilníky nebo pera' },
@@ -32,7 +37,10 @@ const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; nam
     { value: 'skadis-container', name: 'SKÅDIS box', description: 'Otevřený zásobník na drobné nářadí a materiál' },
     { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Polička se dvěma J-háky a spodními kolíky' },
   ] },
-  { name: 'Dekorace a dárky', types: [
+]
+
+const ORNAMENT_TYPE_SECTIONS: GadgetTypeSection[] = [
+  { name: 'Ozdoby pro CNC frézku', types: [
     { value: 'name-ornament', name: 'Vánoční ozdoba se jménem', description: 'Jednodílný průřez s rámem a motivy pro CNC frézku' },
   ] },
 ]
@@ -57,6 +65,9 @@ function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
 export function GadgetControlPanel({ settings, partCount, mode, onModeChange, onChange, onExport, exporting }: Props) {
   const isSkadis = settings.type.startsWith('skadis-')
   const isOrnament = settings.type === 'name-ornament'
+  const typeSections = mode === 'skadis' ? SKADIS_TYPE_SECTIONS : mode === 'ornament' ? ORNAMENT_TYPE_SECTIONS : GADGET_TYPE_SECTIONS
+  const typeTitle = mode === 'skadis' ? 'Typ SKÅDIS doplňku' : mode === 'ornament' ? 'Typ CNC ozdoby' : 'Typ gadgetu'
+  const TypeIcon = mode === 'skadis' ? Grip : mode === 'ornament' ? Gift : Gamepad2
   return (
     <aside className="panel">
       <div className="panel__brand">
@@ -66,9 +77,9 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
       <div className="panel__scroll">
         <section className="section section--generator"><GeneratorSwitcher mode={mode} onChange={onModeChange} /></section>
         <section className="section">
-          <div className="section__title"><Gamepad2 size={15} /><span>Typ gadgetu</span></div>
+          <div className="section__title"><TypeIcon size={15} /><span>{typeTitle}</span></div>
           <div className="gadget-sections">
-            {TYPE_SECTIONS.map((group) => (
+            {typeSections.map((group) => (
               <div className="gadget-category" key={group.name}>
                 <h3>{group.name}</h3>
                 <div className="style-list">

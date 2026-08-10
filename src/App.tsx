@@ -1,4 +1,4 @@
-import { Gamepad2, Grid3X3, RotateCcw, Ruler, ScanLine, Wrench } from 'lucide-react'
+import { Gamepad2, Gift, Grid3X3, Grip, RotateCcw, Ruler, ScanLine, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
 import { GadgetControlPanel } from './components/GadgetControlPanel'
@@ -187,6 +187,17 @@ function App() {
     setGadgetSettings((current) => ({ ...current, [key]: value }))
   }
 
+  const changeMode = (nextMode: GeneratorMode) => {
+    if (nextMode === 'skadis' && !gadgetSettings.type.startsWith('skadis-')) {
+      updateGadgetSetting('type', 'skadis-hook')
+    } else if (nextMode === 'ornament' && gadgetSettings.type !== 'name-ornament') {
+      updateGadgetSetting('type', 'name-ornament')
+    } else if (nextMode === 'gadget' && (gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type === 'name-ornament')) {
+      updateGadgetSetting('type', 'cable-comb')
+    }
+    setMode(nextMode)
+  }
+
   const handleExport = async (format: 'stl' | 'glb' | 'svg') => {
     setExporting(format)
     try {
@@ -235,8 +246,8 @@ function App() {
   const modelWidth = Math.round(geometry.width)
   const modelDepth = Math.round(geometry.depth)
   const modelHeight = Math.round((settings.wallHeight + settings.floorThickness) * 10) / 10
-  const generatorNumber = mode === 'maze' ? '01' : mode === 'organizer' ? '02' : mode === 'template' ? '03' : '04'
-  const generatorTitle = mode === 'maze' ? '3D labyrint' : mode === 'organizer' ? 'Zásuvkový organizér' : mode === 'template' ? 'CNC šablony a přípravky' : 'CNC a 3D gadgety'
+  const generatorNumber = mode === 'maze' ? '01' : mode === 'organizer' ? '02' : mode === 'template' ? '03' : mode === 'gadget' ? '04' : mode === 'skadis' ? '05' : '06'
+  const generatorTitle = mode === 'maze' ? '3D labyrint' : mode === 'organizer' ? 'Zásuvkový organizér' : mode === 'template' ? 'CNC šablony a přípravky' : mode === 'gadget' ? 'CNC a 3D gadgety' : mode === 'skadis' ? 'SKÅDIS doplňky' : 'Ozdoby pro CNC frézku'
   const templateFeatureCount = templateData.holes.length + templateData.slots.length
   const templateFeatureUnit = templateSettings.type === 'skadis'
     ? templateFeatureCount === 1 ? 'drážka' : templateFeatureCount >= 2 && templateFeatureCount <= 4 ? 'drážky' : 'drážek'
@@ -254,14 +265,14 @@ function App() {
           onExport={handleExport}
           exporting={exporting}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={changeMode}
         />
       ) : mode === 'organizer' ? (
         <OrganizerControlPanel
           settings={organizerSettings}
           binCount={organizerBins.length}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={changeMode}
           onChange={updateOrganizerSetting}
           onExport={handleOrganizerExport}
           exporting={exporting}
@@ -271,7 +282,7 @@ function App() {
           settings={templateSettings}
           featureCount={templateFeatureCount}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={changeMode}
           onChange={updateTemplateSetting}
           onExport={handleTemplateExport}
           exporting={exporting}
@@ -281,7 +292,7 @@ function App() {
           settings={gadgetSettings}
           partCount={gadgetData.parts.length + gadgetData.primitives.length}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={changeMode}
           onChange={updateGadgetSetting}
           onExport={handleGadgetExport}
           exporting={exporting}
@@ -317,8 +328,8 @@ function App() {
 
         <footer className="workspace__footer">
           <div className="metric">
-            {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : <Gamepad2 size={16} />}
-            <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : 'Gadget'}</span>
+            {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : mode === 'skadis' ? <Grip size={16} /> : mode === 'ornament' ? <Gift size={16} /> : <Gamepad2 size={16} />}
+            <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : mode === 'skadis' ? 'SKÅDIS doplněk' : mode === 'ornament' ? 'CNC ozdoba' : 'Gadget'}</span>
             <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type === 'name-ornament' ? '1 tisknutelný model' : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
           </div>
           <div className="metric">

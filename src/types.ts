@@ -1,6 +1,6 @@
 export type MazeStyle = 'classic' | 'braided' | 'rooms'
 export type MazeShape = 'rectangular' | 'circular'
-export type GeneratorMode = 'maze' | 'organizer' | 'template' | 'gadget'
+export type GeneratorMode = 'maze' | 'organizer' | 'template' | 'gadget' | 'skadis' | 'ornament'
 export type OrganizerLayout = 'grid' | 'recursive'
 export type OrganizerDivider = 'none' | 'halves' | 'quarters'
 export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius' | 'skadis'
