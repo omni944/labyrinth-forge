@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { GadgetGeometryData, GadgetPart, GadgetSettings, TemplateHole, TemplatePoint } from '../types'
+import type { GadgetGeometryData, GadgetPart, GadgetPrimitive, GadgetSettings, TemplateHole, TemplatePoint } from '../types'
 
 function rectangle(width: number, depth: number, centerZ = 0): TemplatePoint[] {
   return [
@@ -38,6 +38,7 @@ function cableComb(settings: GadgetSettings): GadgetGeometryData {
   outline.push({ x: -halfWidth, z: halfDepth })
   return {
     parts: [basePart('kabelovy-hreben', outline, settings.materialThickness)],
+    primitives: [],
     width: settings.gadgetWidth,
     depth: settings.gadgetDepth,
     height: settings.materialThickness,
@@ -58,6 +59,7 @@ function toolRack(settings: GadgetSettings): GadgetGeometryData {
   part.holes = zValues.flatMap((z) => xValues.map((x): TemplateHole => ({ x, z, diameter: settings.toolHoleDiameter })))
   return {
     parts: [part],
+    primitives: [],
     width: settings.gadgetWidth,
     depth: settings.gadgetDepth,
     height: settings.materialThickness,
@@ -106,6 +108,7 @@ function phoneStand(settings: GadgetSettings): GadgetGeometryData {
   base.holes.push({ x: 0, z: frontZ * 0.52, diameter: Math.max(8, settings.deviceThickness * 0.7) })
   return {
     parts: [base, back, lip],
+    primitives: [],
     width: settings.gadgetWidth,
     depth: settings.gadgetDepth + settings.phoneBackHeight * Math.cos((settings.phoneAngle * Math.PI) / 180),
     height: settings.phoneBackHeight * Math.sin((settings.phoneAngle * Math.PI) / 180),
@@ -142,6 +145,7 @@ function keyRack(settings: GadgetSettings): GadgetGeometryData {
   }))
   return {
     parts: [part],
+    primitives: [],
     width: settings.gadgetWidth,
     depth: settings.gadgetDepth,
     height: settings.materialThickness,
@@ -168,6 +172,7 @@ function batteryHolder(settings: GadgetSettings): GadgetGeometryData {
   top.position = [0, settings.baseThickness, 0]
   return {
     parts: [bottom, top],
+    primitives: [],
     width: settings.gadgetWidth,
     depth: settings.gadgetDepth,
     height: settings.baseThickness + settings.materialThickness,
@@ -198,9 +203,92 @@ function headphoneStand(settings: GadgetSettings): GadgetGeometryData {
   upright.position = [0, settings.materialThickness * 0.2, 0]
   return {
     parts: [base, upright],
+    primitives: [],
     width: Math.max(settings.gadgetWidth, settings.headrestWidth),
     depth: settings.gadgetDepth,
     height: settings.standHeight,
+  }
+}
+
+function boxPrimitive(name: string, size: [number, number, number], position: [number, number, number]): GadgetPrimitive {
+  return { name, kind: 'box', size, position, rotation: [0, 0, 0] }
+}
+
+function skadisMount(settings: GadgetSettings, width: number, mountCount: 1 | 2) {
+  const bodyHeight = Math.max(36, settings.skadisSlotHeight + 18)
+  const connectorWidth = Math.max(2.4, settings.skadisSlotWidth - settings.fitClearance)
+  const neckHeight = Math.max(3, Math.min(5, settings.skadisSlotHeight * 0.3))
+  const lockDrop = Math.max(5, settings.skadisSlotHeight - neckHeight - 1)
+  const lockThickness = Math.max(2.4, settings.materialThickness * 0.7)
+  const behindPanel = settings.skadisPanelThickness + settings.skadisBackClearance
+  const bodyOverlap = 0.8
+  const neckDepth = behindPanel + bodyOverlap
+  const neckY = bodyHeight - neckHeight - 3
+  const mountSpacing = Math.min(settings.skadisMountSpacing, Math.max(20, width - connectorWidth - 8))
+  const xValues = mountCount === 1 ? [0] : [-mountSpacing / 2, mountSpacing / 2]
+  const primitives: GadgetPrimitive[] = [
+    boxPrimitive('skadis-predni-deska', [width, bodyHeight, settings.materialThickness], [0, bodyHeight / 2, settings.materialThickness / 2]),
+  ]
+  xValues.forEach((x, index) => {
+    primitives.push(
+      boxPrimitive(`skadis-krcek-${index + 1}`, [connectorWidth, neckHeight, neckDepth], [x, neckY, (bodyOverlap - behindPanel) / 2]),
+      boxPrimitive(`skadis-zamek-${index + 1}`, [connectorWidth, lockDrop, lockThickness], [x, neckY - neckHeight / 2 - lockDrop / 2 + 0.6, -behindPanel - lockThickness / 2]),
+    )
+  })
+  return { primitives, bodyHeight, lockThickness, behindPanel }
+}
+
+function skadisHook(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 1)
+  const armWidth = Math.max(10, Math.min(18, settings.gadgetWidth * 0.24))
+  const armHeight = settings.materialThickness
+  const armY = Math.max(12, mount.bodyHeight * 0.38)
+  const tipHeight = Math.max(12, settings.materialThickness * 3)
+  mount.primitives.push(
+    boxPrimitive('skadis-hacek-rameno', [armWidth, armHeight, settings.gadgetDepth], [0, armY, settings.materialThickness + settings.gadgetDepth / 2 - 0.5]),
+    boxPrimitive('skadis-hacek-doraz', [armWidth, tipHeight, settings.materialThickness], [0, armY + tipHeight / 2 - armHeight / 2, settings.materialThickness + settings.gadgetDepth - settings.materialThickness / 2 - 0.5]),
+  )
+  return {
+    parts: [],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
+  }
+}
+
+function skadisToolHolder(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const shelf = basePart('skadis-drzak-nastroju', rectangle(settings.gadgetWidth, settings.gadgetDepth), settings.materialThickness)
+  const usableWidth = Math.max(0, settings.gadgetWidth - settings.toolMargin * 2)
+  const xValues = settings.toolColumns === 1
+    ? [0]
+    : Array.from({ length: settings.toolColumns }, (_, index) => -usableWidth / 2 + (index / (settings.toolColumns - 1)) * usableWidth)
+  shelf.holes = xValues.map((x) => ({ x, z: 0, diameter: settings.toolHoleDiameter }))
+  shelf.position = [0, Math.max(settings.materialThickness, mount.bodyHeight * 0.34), settings.materialThickness + settings.gadgetDepth / 2 - 0.5]
+  return {
+    parts: [shelf],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
+  }
+}
+
+function skadisShelf(settings: GadgetSettings): GadgetGeometryData {
+  const mount = skadisMount(settings, settings.gadgetWidth, 2)
+  const shelfY = Math.max(settings.materialThickness / 2, mount.bodyHeight * 0.28)
+  const lipHeight = Math.max(12, settings.materialThickness * 3)
+  mount.primitives.push(
+    boxPrimitive('skadis-policka-plocha', [settings.gadgetWidth, settings.materialThickness, settings.gadgetDepth], [0, shelfY, settings.materialThickness + settings.gadgetDepth / 2 - 0.5]),
+    boxPrimitive('skadis-policka-celo', [settings.gadgetWidth, lipHeight, settings.materialThickness], [0, shelfY + lipHeight / 2 - settings.materialThickness / 2, settings.materialThickness + settings.gadgetDepth - settings.materialThickness / 2 - 0.5]),
+  )
+  return {
+    parts: [],
+    primitives: mount.primitives,
+    width: settings.gadgetWidth,
+    depth: mount.behindPanel + mount.lockThickness + settings.materialThickness + settings.gadgetDepth,
+    height: mount.bodyHeight,
   }
 }
 
@@ -210,7 +298,10 @@ export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
   if (settings.type === 'phone-stand') return phoneStand(settings)
   if (settings.type === 'key-rack') return keyRack(settings)
   if (settings.type === 'battery-holder') return batteryHolder(settings)
-  return headphoneStand(settings)
+  if (settings.type === 'headphone-stand') return headphoneStand(settings)
+  if (settings.type === 'skadis-hook') return skadisHook(settings)
+  if (settings.type === 'skadis-tool-holder') return skadisToolHolder(settings)
+  return skadisShelf(settings)
 }
 
 function pathFromOutline(outline: TemplatePoint[]) {
@@ -250,6 +341,17 @@ export function createGadgetGroup(data: GadgetGeometryData) {
     mesh.receiveShadow = true
     mesh.position.set(...part.position)
     mesh.rotation.set(...part.rotation)
+    group.add(mesh)
+  })
+  data.primitives.forEach((primitive, index) => {
+    const geometry = new THREE.BoxGeometry(...primitive.size)
+    const material = new THREE.MeshStandardMaterial({ color: colors[(data.parts.length + index) % colors.length], roughness: 0.62 })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.name = primitive.name
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    mesh.position.set(...primitive.position)
+    mesh.rotation.set(...primitive.rotation)
     group.add(mesh)
   })
   group.updateMatrixWorld(true)

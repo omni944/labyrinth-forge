@@ -28,6 +28,11 @@ const settings: GadgetSettings = {
   standHeight: 240,
   stemWidth: 42,
   headrestWidth: 110,
+  skadisPanelThickness: 5,
+  skadisSlotWidth: 5,
+  skadisSlotHeight: 15,
+  skadisMountSpacing: 40,
+  skadisBackClearance: 0.4,
 }
 
 describe('generateGadget', () => {
@@ -73,6 +78,28 @@ describe('generateGadget', () => {
     expect(data.parts[0].cutouts).toHaveLength(1)
     expect(data.parts[1].rotation[0]).toBe(Math.PI / 2)
     expect(data.height).toBe(settings.standHeight)
+  })
+
+  it('SKÅDIS háček obsahuje průchozí krček, zadní zámek a přední doraz', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-hook', materialThickness: 4, gadgetWidth: 60, gadgetDepth: 40 })
+    expect(data.parts).toHaveLength(0)
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-krcek-1')).toBe(true)
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-zamek-1' && primitive.position[2] < -settings.skadisPanelThickness)).toBe(true)
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-hacek-doraz')).toBe(true)
+  })
+
+  it('SKÅDIS držák nástrojů má dva zámky a parametrické otvory', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-tool-holder', toolColumns: 4 })
+    expect(data.parts).toHaveLength(1)
+    expect(data.parts[0].holes).toHaveLength(4)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
+  })
+
+  it('SKÅDIS polička obsahuje plochu, čelo a dva montážní zámky', () => {
+    const data = generateGadget({ ...settings, type: 'skadis-shelf' })
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-plocha')).toBe(true)
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-celo')).toBe(true)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
   })
 
   it('DXF stojánku rozloží jednotlivé díly do samostatných vrstev', () => {
