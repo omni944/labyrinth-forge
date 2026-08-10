@@ -9,21 +9,22 @@ import { OrganizerScene } from './components/OrganizerScene'
 import { TemplateControlPanel } from './components/TemplateControlPanel'
 import { TemplateScene } from './components/TemplateScene'
 import { exportGadget3MF, exportGadgetSTL, exportGLB, exportOrganizerGLB, exportOrganizerSTL, exportSTL, exportTemplateGLB, exportTemplateSTL } from './lib/export'
-import { downloadGadgetDXF, generateGadget } from './lib/gadget'
-import { buildGeometryData, generateMaze } from './lib/maze'
+import { downloadGadgetDXF, downloadGadgetSVG, generateGadget } from './lib/gadget'
+import { buildGeometryData, downloadMazeSVG, generateMaze } from './lib/maze'
 import { generateOrganizer } from './lib/organizer'
-import { downloadTemplateDXF, generateTemplate } from './lib/template'
+import { downloadTemplateDXF, downloadTemplateSVG, generateTemplate } from './lib/template'
 import type { GadgetSettings, GeneratorMode, MazeSettings, OrganizerSettings, TemplateSettings } from './types'
 
 const INITIAL_SETTINGS: MazeSettings = {
   columns: 16,
   rows: 12,
-  cellSize: 12,
+  pathWidth: 10.4,
   wallThickness: 1.6,
   wallHeight: 9,
   floorThickness: 1.2,
   seed: 2841,
   style: 'classic',
+  shape: 'rectangular',
   braid: 55,
   roomCount: 3,
 }
@@ -43,6 +44,7 @@ const INITIAL_ORGANIZER_SETTINGS: OrganizerSettings = {
   iterations: 1,
   widthSplit: 0.55,
   depthSplit: 0.45,
+  binDividers: {},
 }
 
 const INITIAL_TEMPLATE_SETTINGS: TemplateSettings = {
@@ -60,6 +62,11 @@ const INITIAL_TEMPLATE_SETTINGS: TemplateSettings = {
   pinRowSpacing: 32,
   cornerRadius: 40,
   mountingHoleDiameter: 6,
+  skadisSlotWidth: 5,
+  skadisSlotHeight: 15,
+  skadisSpacingX: 20,
+  skadisSpacingZ: 20,
+  skadisStagger: 10,
 }
 
 const INITIAL_GADGET_SETTINGS: GadgetSettings = {
@@ -124,7 +131,9 @@ function App() {
         ? { plateWidth: 80, plateDepth: 320, plateThickness: 12, holeDiameter: 5, edgeMargin: 20, pinCount: 9, pinSpacing: 32, pinColumns: 1 }
         : type === 'corner-radius'
           ? { plateWidth: 200, plateDepth: 200, plateThickness: 12, edgeMargin: 25, cornerRadius: 40, mountingHoleDiameter: 6 }
-          : { plateWidth: 240, plateDepth: 180, plateThickness: 12, holeDiameter: 8, edgeMargin: 20, gridRows: 3, gridColumns: 4 }
+          : type === 'skadis'
+            ? { plateWidth: 760, plateDepth: 560, plateThickness: 5, edgeMargin: 20, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisSpacingX: 20, skadisSpacingZ: 20, skadisStagger: 10 }
+            : { plateWidth: 240, plateDepth: 180, plateThickness: 12, holeDiameter: 8, edgeMargin: 20, gridRows: 3, gridColumns: 4 }
       setTemplateSettings((current) => ({ ...current, ...preset, type }))
       return
     }
@@ -151,10 +160,11 @@ function App() {
     setGadgetSettings((current) => ({ ...current, [key]: value }))
   }
 
-  const handleExport = async (format: 'stl' | 'glb') => {
+  const handleExport = async (format: 'stl' | 'glb' | 'svg') => {
     setExporting(format)
     try {
       if (format === 'stl') exportSTL(geometry, settings)
+      else if (format === 'svg') downloadMazeSVG(geometry, settings)
       else await exportGLB(geometry, settings)
     } finally {
       setExporting(null)
@@ -171,10 +181,11 @@ function App() {
     }
   }
 
-  const handleTemplateExport = async (format: 'dxf' | 'stl' | 'glb') => {
+  const handleTemplateExport = async (format: 'dxf' | 'svg' | 'stl' | 'glb') => {
     setExporting(format)
     try {
       if (format === 'dxf') downloadTemplateDXF(templateData, templateSettings)
+      else if (format === 'svg') downloadTemplateSVG(templateData, templateSettings)
       else if (format === 'stl') exportTemplateSTL(templateData, templateSettings)
       else await exportTemplateGLB(templateData, templateSettings)
     } finally {
@@ -182,10 +193,11 @@ function App() {
     }
   }
 
-  const handleGadgetExport = async (format: 'dxf' | 'stl' | '3mf') => {
+  const handleGadgetExport = async (format: 'dxf' | 'svg' | 'stl' | '3mf') => {
     setExporting(format)
     try {
       if (format === 'dxf') downloadGadgetDXF(gadgetData, gadgetSettings)
+      else if (format === 'svg') downloadGadgetSVG(gadgetData, gadgetSettings)
       else if (format === 'stl') exportGadgetSTL(gadgetData, gadgetSettings)
       else await exportGadget3MF(gadgetData, gadgetSettings)
     } finally {
@@ -198,7 +210,10 @@ function App() {
   const modelHeight = Math.round((settings.wallHeight + settings.floorThickness) * 10) / 10
   const generatorNumber = mode === 'maze' ? '01' : mode === 'organizer' ? '02' : mode === 'template' ? '03' : '04'
   const generatorTitle = mode === 'maze' ? '3D labyrint' : mode === 'organizer' ? 'Zásuvkový organizér' : mode === 'template' ? 'CNC šablony a přípravky' : 'CNC a 3D gadgety'
-  const templateHoleUnit = templateData.holes.length === 1 ? 'otvor' : templateData.holes.length >= 2 && templateData.holes.length <= 4 ? 'otvory' : 'otvorů'
+  const templateFeatureCount = templateData.holes.length + templateData.slots.length
+  const templateFeatureUnit = templateSettings.type === 'skadis'
+    ? templateFeatureCount === 1 ? 'drážka' : templateFeatureCount >= 2 && templateFeatureCount <= 4 ? 'drážky' : 'drážek'
+    : templateFeatureCount === 1 ? 'otvor' : templateFeatureCount >= 2 && templateFeatureCount <= 4 ? 'otvory' : 'otvorů'
 
   return (
     <main className="app-shell">
@@ -217,6 +232,7 @@ function App() {
       ) : mode === 'organizer' ? (
         <OrganizerControlPanel
           settings={organizerSettings}
+          binCount={organizerBins.length}
           mode={mode}
           onModeChange={setMode}
           onChange={updateOrganizerSetting}
@@ -226,7 +242,7 @@ function App() {
       ) : mode === 'template' ? (
         <TemplateControlPanel
           settings={templateSettings}
-          holeCount={templateData.holes.length}
+          featureCount={templateFeatureCount}
           mode={mode}
           onModeChange={setMode}
           onChange={updateTemplateSetting}
@@ -276,7 +292,7 @@ function App() {
           <div className="metric">
             {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : <Gamepad2 size={16} />}
             <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : 'Gadget'}</span>
-            <strong>{mode === 'maze' ? `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateData.holes.length} ${templateHoleUnit}` : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
+            <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
           </div>
           <div className="metric">
             <Ruler size={16} />
@@ -285,7 +301,7 @@ function App() {
           </div>
           <div className="metric metric--right">
             <span>{mode === 'maze' ? 'Počet stěn' : mode === 'organizer' ? 'Rozvržení' : 'Výrobní formát'}</span>
-            <strong>{mode === 'maze' ? geometry.walls.length : mode === 'organizer' ? organizerSettings.layout === 'grid' ? `${organizerSettings.columns} × ${organizerSettings.rows}` : `4^${organizerSettings.iterations}` : mode === 'template' ? 'DXF · STL · GLB' : 'DXF · STL · 3MF'}</strong>
+            <strong>{mode === 'maze' ? geometry.walls.length : mode === 'organizer' ? organizerSettings.layout === 'grid' ? `${organizerSettings.columns} × ${organizerSettings.rows}` : `4^${organizerSettings.iterations}` : mode === 'template' ? templateSettings.type === 'skadis' ? 'DXF · SVG' : 'DXF · SVG · STL · GLB' : 'DXF · SVG · STL · 3MF'}</strong>
           </div>
         </footer>
       </section>

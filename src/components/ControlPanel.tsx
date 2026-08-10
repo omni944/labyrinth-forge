@@ -1,5 +1,5 @@
-import { Box, Download, Dices, FileBox, Palette, SlidersHorizontal } from 'lucide-react'
-import type { GeneratorMode, MazeSettings, MazeStyle } from '../types'
+import { Box, Circle, Download, Dices, FileBox, Palette, SlidersHorizontal, Square } from 'lucide-react'
+import type { GeneratorMode, MazeSettings, MazeShape, MazeStyle } from '../types'
 import { GeneratorSwitcher } from './GeneratorSwitcher'
 
 interface ControlPanelProps {
@@ -8,7 +8,7 @@ interface ControlPanelProps {
   onChange: <K extends keyof MazeSettings>(key: K, value: MazeSettings[K]) => void
   onWallColorChange: (value: string) => void
   onNewSeed: () => void
-  onExport: (format: 'stl' | 'glb') => void
+  onExport: (format: 'stl' | 'glb' | 'svg') => void
   exporting: string | null
   mode: GeneratorMode
   onModeChange: (mode: GeneratorMode) => void
@@ -18,6 +18,11 @@ const STYLES: Array<{ value: MazeStyle; name: string; description: string }> = [
   { value: 'classic', name: 'Klasický', description: 'Jediné řešení, dlouhé klikaté chodby' },
   { value: 'braided', name: 'Pletený', description: 'Více cest, méně slepých ramen' },
   { value: 'rooms', name: 'Komnaty', description: 'Otevřené prostory propojené chodbami' },
+]
+
+const SHAPES: Array<{ value: MazeShape; name: string; description: string }> = [
+  { value: 'rectangular', name: 'Obdélníkové', description: 'Klasická pravoúhlá mřížka' },
+  { value: 'circular', name: 'Kruhové', description: 'Soustředné prstence a radiální stěny' },
 ]
 
 function RangeControl({
@@ -94,12 +99,24 @@ export function ControlPanel({
         </section>
 
         <section className="section">
-          <div className="section__title"><SlidersHorizontal size={15} /><span>Rozměry mřížky</span></div>
-          <div className="two-columns">
-            <RangeControl label="Sloupce" value={settings.columns} min={4} max={32} onChange={(v) => onChange('columns', v)} />
-            <RangeControl label="Řádky" value={settings.rows} min={4} max={32} onChange={(v) => onChange('rows', v)} />
+          <div className="section__title">{settings.shape === 'circular' ? <Circle size={15} /> : <Square size={15} />}<span>Tvar labyrintu</span></div>
+          <div className="style-list">
+            {SHAPES.map((shape) => (
+              <button key={shape.value} className={`style-card ${settings.shape === shape.value ? 'is-active' : ''}`} onClick={() => onChange('shape', shape.value)}>
+                <span className="style-card__radio" />
+                <span><strong>{shape.name}</strong><small>{shape.description}</small></span>
+              </button>
+            ))}
           </div>
-          <RangeControl label="Velikost buňky" value={settings.cellSize} min={5} max={30} step={1} unit=" mm" onChange={(v) => onChange('cellSize', v)} />
+        </section>
+
+        <section className="section">
+          <div className="section__title"><SlidersHorizontal size={15} /><span>{settings.shape === 'circular' ? 'Prstence a sektory' : 'Rozměry mřížky'}</span></div>
+          <div className="two-columns">
+            <RangeControl label={settings.shape === 'circular' ? 'Sektory' : 'Sloupce'} value={settings.columns} min={4} max={32} onChange={(v) => onChange('columns', v)} />
+            <RangeControl label={settings.shape === 'circular' ? 'Prstence' : 'Řádky'} value={settings.rows} min={4} max={32} onChange={(v) => onChange('rows', v)} />
+          </div>
+          <RangeControl label="Šířka cesty" value={settings.pathWidth} min={3} max={40} step={0.2} unit=" mm" onChange={(v) => onChange('pathWidth', v)} />
         </section>
 
         <section className="section">
@@ -139,12 +156,15 @@ export function ControlPanel({
         <button className="seed-button" onClick={onNewSeed}>
           <Dices size={17} /><span>Nový labyrint</span><code>#{settings.seed}</code>
         </button>
-        <div className="export-row">
+        <div className="export-row export-row--three">
           <button onClick={() => onExport('stl')} disabled={Boolean(exporting)}>
             <Download size={16} />{exporting === 'stl' ? 'Exportuji…' : 'STL'}
           </button>
           <button onClick={() => onExport('glb')} disabled={Boolean(exporting)}>
             <Download size={16} />{exporting === 'glb' ? 'Exportuji…' : 'GLB'}
+          </button>
+          <button onClick={() => onExport('svg')} disabled={Boolean(exporting)}>
+            <Download size={16} />SVG
           </button>
         </div>
       </div>

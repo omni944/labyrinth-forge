@@ -8,7 +8,7 @@ interface Props {
   mode: GeneratorMode
   onModeChange: (mode: GeneratorMode) => void
   onChange: <K extends keyof GadgetSettings>(key: K, value: GadgetSettings[K]) => void
-  onExport: (format: 'dxf' | 'stl' | '3mf') => void
+  onExport: (format: 'dxf' | 'svg' | 'stl' | '3mf') => void
   exporting: string | null
 }
 
@@ -132,8 +132,9 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
       </div>
       <div className="panel__footer">
         <div className="export-summary"><span>CNC + Bambu Studio</span><strong>{partCount} {partCount === 1 ? 'díl' : 'díly'}</strong></div>
-        <div className="export-row export-row--three">
+        <div className="export-row export-row--four">
           <button onClick={() => onExport('dxf')} disabled={Boolean(exporting)}><Download size={15} />DXF</button>
+          <button onClick={() => onExport('svg')} disabled={Boolean(exporting)}><Download size={15} />SVG</button>
           <button onClick={() => onExport('stl')} disabled={Boolean(exporting)}><Download size={15} />STL</button>
           <button onClick={() => onExport('3mf')} disabled={Boolean(exporting)}><Download size={15} />3MF</button>
         </div>

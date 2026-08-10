@@ -1,7 +1,9 @@
 export type MazeStyle = 'classic' | 'braided' | 'rooms'
+export type MazeShape = 'rectangular' | 'circular'
 export type GeneratorMode = 'maze' | 'organizer' | 'template' | 'gadget'
 export type OrganizerLayout = 'grid' | 'recursive'
-export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius'
+export type OrganizerDivider = 'none' | 'halves' | 'quarters'
+export type TemplateType = 'drilling-grid' | 'shelf-pins' | 'corner-radius' | 'skadis'
 export type GadgetType =
   | 'cable-comb'
   | 'tool-rack'
@@ -22,12 +24,13 @@ export interface Cell {
 export interface MazeSettings {
   columns: number
   rows: number
-  cellSize: number
+  pathWidth: number
   wallThickness: number
   wallHeight: number
   floorThickness: number
   seed: number
   style: MazeStyle
+  shape: MazeShape
   braid: number
   roomCount: number
 }
@@ -37,12 +40,17 @@ export interface WallSegment {
   z: number
   width: number
   depth: number
+  rotation?: number
 }
 
 export interface MazeGeometryData {
   width: number
   depth: number
   walls: WallSegment[]
+  shape: MazeShape
+  radius?: number
+  entrance: [number, number]
+  exit: [number, number]
 }
 
 export interface OrganizerSettings {
@@ -60,6 +68,7 @@ export interface OrganizerSettings {
   iterations: number
   widthSplit: number
   depthSplit: number
+  binDividers: Record<number, OrganizerDivider>
 }
 
 export interface OrganizerBin {
@@ -68,6 +77,7 @@ export interface OrganizerBin {
   z: number
   width: number
   depth: number
+  divider: OrganizerDivider
 }
 
 export interface TemplateSettings {
@@ -85,6 +95,11 @@ export interface TemplateSettings {
   pinRowSpacing: number
   cornerRadius: number
   mountingHoleDiameter: number
+  skadisSlotWidth: number
+  skadisSlotHeight: number
+  skadisSpacingX: number
+  skadisSpacingZ: number
+  skadisStagger: number
 }
 
 export interface TemplatePoint {
@@ -101,6 +116,13 @@ export interface TemplateGeometryData {
   depth: number
   outline: TemplatePoint[]
   holes: TemplateHole[]
+  slots: TemplateSlot[]
+}
+
+export interface TemplateSlot extends TemplatePoint {
+  width: number
+  height: number
+  radius: number
 }
 
 export interface GadgetSettings {

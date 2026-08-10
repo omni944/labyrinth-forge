@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { TemplateGeometryData, TemplateHole, TemplatePoint, TemplateSettings } from '../types'
+import type { TemplateGeometryData, TemplateHole, TemplatePoint, TemplateSettings, TemplateSlot } from '../types'
 
 function rectangleOutline(width: number, depth: number): TemplatePoint[] {
   const halfWidth = width / 2
@@ -72,6 +72,31 @@ function radiusMountingHoles(settings: TemplateSettings): TemplateHole[] {
   ]
 }
 
+function skadisSlots(settings: TemplateSettings): TemplateSlot[] {
+  const minX = -settings.plateWidth / 2 + settings.edgeMargin
+  const maxX = settings.plateWidth / 2 - settings.edgeMargin
+  const minZ = -settings.plateDepth / 2 + settings.edgeMargin
+  const maxZ = settings.plateDepth / 2 - settings.edgeMargin
+  const columnCount = Math.max(1, Math.floor((maxX - minX) / settings.skadisSpacingX) + 1)
+  const usedWidth = (columnCount - 1) * settings.skadisSpacingX
+  const startX = -usedWidth / 2
+  const slots: TemplateSlot[] = []
+  for (let column = 0; column < columnCount; column += 1) {
+    const x = startX + column * settings.skadisSpacingX
+    const offset = column % 2 === 1 ? settings.skadisStagger : 0
+    for (let z = minZ + offset; z <= maxZ + 0.001; z += settings.skadisSpacingZ) {
+      slots.push({
+        x,
+        z,
+        width: settings.skadisSlotWidth,
+        height: settings.skadisSlotHeight,
+        radius: Math.min(settings.skadisSlotWidth / 2, settings.skadisSlotHeight / 2),
+      })
+    }
+  }
+  return slots
+}
+
 export function generateTemplate(settings: TemplateSettings): TemplateGeometryData {
   if (settings.type === 'corner-radius') {
     return {
@@ -79,14 +104,34 @@ export function generateTemplate(settings: TemplateSettings): TemplateGeometryDa
       depth: settings.plateDepth,
       outline: radiusOutline(settings),
       holes: radiusMountingHoles(settings),
+      slots: [],
     }
   }
   return {
     width: settings.plateWidth,
     depth: settings.plateDepth,
     outline: rectangleOutline(settings.plateWidth, settings.plateDepth),
-    holes: settings.type === 'drilling-grid' ? gridHoles(settings) : shelfPinHoles(settings),
+    holes: settings.type === 'drilling-grid' ? gridHoles(settings) : settings.type === 'shelf-pins' ? shelfPinHoles(settings) : [],
+    slots: settings.type === 'skadis' ? skadisSlots(settings) : [],
   }
+}
+
+function roundedSlotPath(slot: TemplateSlot) {
+  const path = new THREE.Path()
+  const halfWidth = slot.width / 2
+  const halfHeight = slot.height / 2
+  const radius = Math.min(slot.radius, halfWidth, halfHeight)
+  path.moveTo(slot.x - halfWidth + radius, slot.z - halfHeight)
+  path.lineTo(slot.x + halfWidth - radius, slot.z - halfHeight)
+  path.quadraticCurveTo(slot.x + halfWidth, slot.z - halfHeight, slot.x + halfWidth, slot.z - halfHeight + radius)
+  path.lineTo(slot.x + halfWidth, slot.z + halfHeight - radius)
+  path.quadraticCurveTo(slot.x + halfWidth, slot.z + halfHeight, slot.x + halfWidth - radius, slot.z + halfHeight)
+  path.lineTo(slot.x - halfWidth + radius, slot.z + halfHeight)
+  path.quadraticCurveTo(slot.x - halfWidth, slot.z + halfHeight, slot.x - halfWidth, slot.z + halfHeight - radius)
+  path.lineTo(slot.x - halfWidth, slot.z - halfHeight + radius)
+  path.quadraticCurveTo(slot.x - halfWidth, slot.z - halfHeight, slot.x - halfWidth + radius, slot.z - halfHeight)
+  path.closePath()
+  return path
 }
 
 export function createTemplateGeometry(data: TemplateGeometryData, thickness: number) {
@@ -99,6 +144,7 @@ export function createTemplateGeometry(data: TemplateGeometryData, thickness: nu
     path.absarc(hole.x, hole.z, hole.diameter / 2, 0, Math.PI * 2, false)
     shape.holes.push(path)
   })
+  data.slots.forEach((slot) => shape.holes.push(roundedSlotPath(slot)))
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: thickness,
     bevelEnabled: false,
@@ -108,6 +154,22 @@ export function createTemplateGeometry(data: TemplateGeometryData, thickness: nu
   geometry.rotateX(-Math.PI / 2)
   geometry.computeVertexNormals()
   return geometry
+}
+
+function slotOutline(slot: TemplateSlot): TemplatePoint[] {
+  const halfWidth = slot.width / 2
+  const halfHeight = slot.height / 2
+  const radius = Math.min(slot.radius, halfWidth, halfHeight)
+  const corners = [
+    { cx: slot.x + halfWidth - radius, cz: slot.z - halfHeight + radius, start: -Math.PI / 2 },
+    { cx: slot.x + halfWidth - radius, cz: slot.z + halfHeight - radius, start: 0 },
+    { cx: slot.x - halfWidth + radius, cz: slot.z + halfHeight - radius, start: Math.PI / 2 },
+    { cx: slot.x - halfWidth + radius, cz: slot.z - halfHeight + radius, start: Math.PI },
+  ]
+  return corners.flatMap((corner) => Array.from({ length: 5 }, (_, index) => {
+    const angle = corner.start + (index / 4) * (Math.PI / 2)
+    return { x: corner.cx + Math.cos(angle) * radius, z: corner.cz + Math.sin(angle) * radius }
+  }))
 }
 
 export function createTemplateGroup(data: TemplateGeometryData, settings: TemplateSettings) {
@@ -135,8 +197,41 @@ export function buildTemplateDXF(data: TemplateGeometryData) {
     dxf += pair(0, 'CIRCLE') + pair(8, 'DRILLING')
     dxf += pair(10, hole.x.toFixed(4)) + pair(20, hole.z.toFixed(4)) + pair(40, (hole.diameter / 2).toFixed(4))
   })
+  data.slots.forEach((slot) => {
+    const outline = slotOutline(slot)
+    dxf += pair(0, 'LWPOLYLINE') + pair(8, 'SLOTS') + pair(90, outline.length) + pair(70, 1)
+    outline.forEach((point) => {
+      dxf += pair(10, point.x.toFixed(4)) + pair(20, point.z.toFixed(4))
+    })
+  })
   dxf += pair(0, 'ENDSEC') + pair(0, 'EOF')
   return dxf
+}
+
+function svgPath(outline: TemplatePoint[], offsetX: number, offsetZ: number) {
+  return outline.map((point, index) => `${index === 0 ? 'M' : 'L'}${(point.x + offsetX).toFixed(4)} ${(point.z + offsetZ).toFixed(4)}`).join(' ') + ' Z'
+}
+
+export function buildTemplateSVG(data: TemplateGeometryData) {
+  const offsetX = data.width / 2
+  const offsetZ = data.depth / 2
+  const outline = `<path d="${svgPath(data.outline, offsetX, offsetZ)}"/>`
+  const holes = data.holes.map((hole) => `<circle cx="${(hole.x + offsetX).toFixed(4)}" cy="${(hole.z + offsetZ).toFixed(4)}" r="${(hole.diameter / 2).toFixed(4)}"/>`).join('')
+  const slots = data.slots.map((slot) => `<rect x="${(slot.x + offsetX - slot.width / 2).toFixed(4)}" y="${(slot.z + offsetZ - slot.height / 2).toFixed(4)}" width="${slot.width.toFixed(4)}" height="${slot.height.toFixed(4)}" rx="${slot.radius.toFixed(4)}"/>`).join('')
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${data.width.toFixed(4)}mm" height="${data.depth.toFixed(4)}mm" viewBox="0 0 ${data.width.toFixed(4)} ${data.depth.toFixed(4)}"><g id="OUTLINE" fill="none" stroke="#000" stroke-width="0.2">${outline}</g><g id="DRILLING" fill="none" stroke="#000" stroke-width="0.2">${holes}</g><g id="SLOTS" fill="none" stroke="#000" stroke-width="0.2">${slots}</g></svg>`
+}
+
+export function downloadTemplateSVG(data: TemplateGeometryData, settings: TemplateSettings) {
+  const blob = new Blob([buildTemplateSVG(data)], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `sablona-${settings.type}.svg`
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }
 
 export function downloadTemplateDXF(data: TemplateGeometryData, settings: TemplateSettings) {

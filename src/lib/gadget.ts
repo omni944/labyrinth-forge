@@ -297,12 +297,50 @@ export function buildGadgetDXF(data: GadgetGeometryData) {
   return dxf + pair(0, 'ENDSEC') + pair(0, 'EOF')
 }
 
+function svgPath(outline: TemplatePoint[], offsetX: number, offsetZ: number) {
+  return outline.map((point, index) => `${index === 0 ? 'M' : 'L'}${(point.x + offsetX).toFixed(4)} ${(point.z + offsetZ).toFixed(4)}`).join(' ') + ' Z'
+}
+
+export function buildGadgetSVG(data: GadgetGeometryData) {
+  let cursorX = 0
+  let maxDepth = 0
+  const elements: string[] = []
+  data.parts.forEach((part) => {
+    const box = bounds(part.outline)
+    const offsetX = cursorX - box.minX
+    const offsetZ = -box.minZ
+    const layer = part.name.toUpperCase().replaceAll('-', '_')
+    elements.push(`<g id="${layer}"><path class="outline" d="${svgPath(part.outline, offsetX, offsetZ)}"/>`)
+    part.cutouts.forEach((cutout) => elements.push(`<path class="cutout" d="${svgPath(cutout.outline, offsetX, offsetZ)}"/>`))
+    part.holes.forEach((hole) => elements.push(`<circle class="drilling" cx="${(hole.x + offsetX).toFixed(4)}" cy="${(hole.z + offsetZ).toFixed(4)}" r="${(hole.diameter / 2).toFixed(4)}"/>`))
+    elements.push('</g>')
+    cursorX += box.maxX - box.minX + 20
+    maxDepth = Math.max(maxDepth, box.maxZ - box.minZ)
+  })
+  const width = Math.max(1, cursorX - 20)
+  const depth = Math.max(1, maxDepth)
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(4)}mm" height="${depth.toFixed(4)}mm" viewBox="0 0 ${width.toFixed(4)} ${depth.toFixed(4)}"><style>.outline,.cutout,.drilling{fill:none;stroke:#000;stroke-width:.2}</style>${elements.join('')}</svg>`
+}
+
 export function downloadGadgetDXF(data: GadgetGeometryData, settings: GadgetSettings) {
   const blob = new Blob([buildGadgetDXF(data)], { type: 'application/dxf' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = `gadget-${settings.type}.dxf`
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
+}
+
+export function downloadGadgetSVG(data: GadgetGeometryData, settings: GadgetSettings) {
+  const blob = new Blob([buildGadgetSVG(data)], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `gadget-${settings.type}.svg`
   anchor.style.display = 'none'
   document.body.appendChild(anchor)
   anchor.click()

@@ -16,6 +16,7 @@ function Model({ data, settings, wallColor }: Omit<MazeSceneProps, 'resetSignal'
   const wallGeometry = useMemo(() => {
     const geometries = data.walls.map((wall) => {
       const geometry = new THREE.BoxGeometry(wall.width, settings.wallHeight, wall.depth)
+      geometry.rotateY(wall.rotation ?? 0)
       geometry.translate(wall.x, settings.floorThickness + settings.wallHeight / 2, wall.z)
       return geometry
     })
@@ -26,15 +27,14 @@ function Model({ data, settings, wallColor }: Omit<MazeSceneProps, 'resetSignal'
 
   useEffect(() => () => wallGeometry?.dispose(), [wallGeometry])
 
-  const entranceX = -data.width / 2 + settings.cellSize / 2
-  const entranceZ = -data.depth / 2 + settings.cellSize / 2
-  const exitX = data.width / 2 - settings.cellSize / 2
-  const exitZ = data.depth / 2 - settings.cellSize / 2
+  const pitch = settings.pathWidth + settings.wallThickness
 
   return (
     <group>
       <mesh position={[0, settings.floorThickness / 2, 0]} receiveShadow>
-        <boxGeometry args={[data.width, settings.floorThickness, data.depth]} />
+        {data.shape === 'circular'
+          ? <cylinderGeometry args={[data.radius, data.radius, settings.floorThickness, 96]} />
+          : <boxGeometry args={[data.width, settings.floorThickness, data.depth]} />}
         <meshStandardMaterial color="#252622" roughness={0.86} metalness={0.05} />
       </mesh>
       {wallGeometry && (
@@ -42,12 +42,12 @@ function Model({ data, settings, wallColor }: Omit<MazeSceneProps, 'resetSignal'
           <meshStandardMaterial color={wallColor} roughness={0.58} metalness={0.08} />
         </mesh>
       )}
-      <mesh position={[entranceX, settings.floorThickness + 0.28, entranceZ]}>
-        <cylinderGeometry args={[settings.cellSize * 0.14, settings.cellSize * 0.14, 0.5, 28]} />
+      <mesh position={[data.entrance[0], settings.floorThickness + 0.28, data.entrance[1]]}>
+        <cylinderGeometry args={[pitch * 0.14, pitch * 0.14, 0.5, 28]} />
         <meshStandardMaterial color="#e9ff9a" emissive="#b6ef31" emissiveIntensity={0.35} />
       </mesh>
-      <mesh position={[exitX, settings.floorThickness + 0.28, exitZ]}>
-        <cylinderGeometry args={[settings.cellSize * 0.14, settings.cellSize * 0.14, 0.5, 28]} />
+      <mesh position={[data.exit[0], settings.floorThickness + 0.28, data.exit[1]]}>
+        <cylinderGeometry args={[pitch * 0.14, pitch * 0.14, 0.5, 28]} />
         <meshStandardMaterial color="#ff8066" emissive="#ff4c35" emissiveIntensity={0.35} />
       </mesh>
     </group>
@@ -82,6 +82,7 @@ function CameraControls({ data, resetSignal }: Pick<MazeSceneProps, 'data' | 're
 
 export function MazeScene(props: MazeSceneProps) {
   const gridSize = Math.max(props.data.width, props.data.depth) * 2.4
+  const pitch = props.settings.pathWidth + props.settings.wallThickness
   return (
     <Canvas dpr={[1, 2]} shadows gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
       <color attach="background" args={['#141512']} />
@@ -105,10 +106,10 @@ export function MazeScene(props: MazeSceneProps) {
       <Grid
         position={[0, -0.12, 0]}
         args={[gridSize, gridSize]}
-        cellSize={props.settings.cellSize}
+        cellSize={pitch}
         cellThickness={0.55}
         cellColor="#30322b"
-        sectionSize={props.settings.cellSize * 5}
+        sectionSize={pitch * 5}
         sectionThickness={0.8}
         sectionColor="#3c4034"
         fadeDistance={gridSize * 0.65}

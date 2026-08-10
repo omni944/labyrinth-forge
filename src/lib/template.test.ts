@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTemplateDXF, generateTemplate } from './template'
+import { buildTemplateDXF, buildTemplateSVG, generateTemplate } from './template'
 import type { TemplateSettings } from '../types'
 
 const settings: TemplateSettings = {
@@ -17,6 +17,11 @@ const settings: TemplateSettings = {
   pinRowSpacing: 32,
   cornerRadius: 40,
   mountingHoleDiameter: 6,
+  skadisSlotWidth: 5,
+  skadisSlotHeight: 15,
+  skadisSpacingX: 20,
+  skadisSpacingZ: 20,
+  skadisStagger: 10,
 }
 
 describe('generateTemplate', () => {
@@ -41,5 +46,23 @@ describe('generateTemplate', () => {
     expect(dxf).toContain('OUTLINE')
     expect(dxf).toContain('DRILLING')
     expect(dxf.match(/CIRCLE/g)).toHaveLength(12)
+  })
+
+  it('vytvoří nastavitelný SKÅDIS rastr se střídavým odsazením', () => {
+    const data = generateTemplate({ ...settings, type: 'skadis', plateWidth: 100, plateDepth: 100, edgeMargin: 20 })
+    expect(data.holes).toHaveLength(0)
+    expect(data.slots.length).toBeGreaterThan(0)
+    expect(data.slots[0]).toEqual(expect.objectContaining({ width: 5, height: 15 }))
+    expect(data.slots.some((slot) => slot.z === -20)).toBe(true)
+    expect(data.slots.some((slot) => slot.z === -10)).toBe(true)
+  })
+
+  it('DXF a SVG SKÅDIS šablony obsahují výrobní drážky v milimetrech', () => {
+    const data = generateTemplate({ ...settings, type: 'skadis', plateWidth: 100, plateDepth: 100, edgeMargin: 20 })
+    expect(buildTemplateDXF(data)).toContain('SLOTS')
+    const svg = buildTemplateSVG(data)
+    expect(svg).toContain('width="100.0000mm"')
+    expect(svg).toContain('id="SLOTS"')
+    expect(svg).toContain('<rect')
   })
 })

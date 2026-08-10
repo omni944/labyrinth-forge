@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { build3MFModelXML } from './export'
-import { buildGadgetDXF, createGadgetGroup, generateGadget } from './gadget'
+import { buildGadgetDXF, buildGadgetSVG, createGadgetGroup, generateGadget } from './gadget'
 import type { GadgetSettings } from '../types'
 
 const settings: GadgetSettings = {
@@ -88,6 +88,14 @@ describe('generateGadget', () => {
     expect(dxf).toContain('DRZAK_BATERII_DNO_OUTLINE')
     expect(dxf).toContain('DRZAK_BATERII_HORNI_OUTLINE')
     expect(dxf).toContain('DRZAK_BATERII_HORNI_DRILLING')
+  })
+
+  it('SVG rozloží díly gadgetu a zachová otvory i výřezy', () => {
+    const svg = buildGadgetSVG(generateGadget({ ...settings, type: 'phone-stand' }))
+    expect(svg).toContain('width=')
+    expect(svg).toContain('class="outline"')
+    expect(svg).toContain('class="cutout"')
+    expect(svg).toContain('class="drilling"')
   })
 
   it('3MF geometrie deklaruje milimetry a tisknutelný objekt', () => {

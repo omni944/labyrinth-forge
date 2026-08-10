@@ -1,9 +1,11 @@
-import { Box, Download, Grid3X3, PanelsTopLeft, Radius, Ruler, SlidersHorizontal } from 'lucide-react'
-import type { GeneratorMode, OrganizerLayout, OrganizerSettings } from '../types'
+import { Box, Download, Grid3X3, PanelsTopLeft, Radius, Ruler, SplitSquareHorizontal } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { GeneratorMode, OrganizerDivider, OrganizerLayout, OrganizerSettings } from '../types'
 import { GeneratorSwitcher } from './GeneratorSwitcher'
 
 interface Props {
   settings: OrganizerSettings
+  binCount: number
   mode: GeneratorMode
   onModeChange: (mode: GeneratorMode) => void
   onChange: <K extends keyof OrganizerSettings>(key: K, value: OrganizerSettings[K]) => void
@@ -33,7 +35,19 @@ const LAYOUTS: Array<{ value: OrganizerLayout; name: string; description: string
   { value: 'recursive', name: 'Asymetrické dělení', description: 'Různé velikosti podle poměrů dělení' },
 ]
 
-export function OrganizerControlPanel({ settings, mode, onModeChange, onChange, onExport, exporting }: Props) {
+const DIVIDERS: Array<{ value: OrganizerDivider; name: string; description: string }> = [
+  { value: 'none', name: 'Bez přepážky', description: 'Jedna otevřená krabička' },
+  { value: 'halves', name: 'Rozdělit na poloviny', description: 'Jedna podélná přepážka' },
+  { value: 'quarters', name: 'Rozdělit na čtvrtiny', description: 'Dvě křížové přepážky' },
+]
+
+export function OrganizerControlPanel({ settings, binCount, mode, onModeChange, onChange, onExport, exporting }: Props) {
+  const [selectedBin, setSelectedBin] = useState(1)
+  useEffect(() => setSelectedBin((current) => Math.min(current, Math.max(1, binCount))), [binCount])
+  const selectedDivider = settings.binDividers[selectedBin] ?? 'none'
+  const updateDivider = (divider: OrganizerDivider) => {
+    onChange('binDividers', { ...settings.binDividers, [selectedBin]: divider })
+  }
   return (
     <aside className="panel">
       <div className="panel__brand">
@@ -65,8 +79,8 @@ export function OrganizerControlPanel({ settings, mode, onModeChange, onChange, 
           <div className="section__title"><Grid3X3 size={15} /><span>Rozvržení</span></div>
           {settings.layout === 'grid' ? (
             <div className="two-columns">
-              <RangeControl label="Sloupce" value={settings.columns} min={1} max={6} onChange={(v) => onChange('columns', v)} />
-              <RangeControl label="Řádky" value={settings.rows} min={1} max={6} onChange={(v) => onChange('rows', v)} />
+              <RangeControl label="Sloupce" value={settings.columns} min={1} max={12} onChange={(v) => onChange('columns', v)} />
+              <RangeControl label="Řádky" value={settings.rows} min={1} max={12} onChange={(v) => onChange('rows', v)} />
             </div>
           ) : (
             <>
@@ -77,6 +91,23 @@ export function OrganizerControlPanel({ settings, mode, onModeChange, onChange, 
           )}
           <RangeControl label="Okraj zásuvky" value={settings.outerGap} min={0.5} max={10} step={0.5} unit=" mm" onChange={(v) => onChange('outerGap', v)} />
           <RangeControl label="Mezera mezi díly" value={settings.innerGap} min={0.5} max={8} step={0.5} unit=" mm" onChange={(v) => onChange('innerGap', v)} />
+        </section>
+        <section className="section section--accent">
+          <div className="section__title"><SplitSquareHorizontal size={15} /><span>Jednotlivé krabičky</span></div>
+          <label className="select-control">
+            <span>Vybraná krabička</span>
+            <select value={selectedBin} onChange={(event) => setSelectedBin(Number(event.target.value))}>
+              {Array.from({ length: binCount }, (_, index) => <option key={index + 1} value={index + 1}>Krabička {index + 1}</option>)}
+            </select>
+          </label>
+          <div className="style-list">
+            {DIVIDERS.map((divider) => (
+              <button key={divider.value} className={`style-card ${selectedDivider === divider.value ? 'is-active' : ''}`} onClick={() => updateDivider(divider.value)}>
+                <span className="style-card__radio" />
+                <span><strong>{divider.name}</strong><small>{divider.description}</small></span>
+              </button>
+            ))}
+          </div>
         </section>
         <section className="section">
           <div className="section__title"><Radius size={15} /><span>Geometrie přihrádek</span></div>
