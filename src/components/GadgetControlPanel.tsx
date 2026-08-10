@@ -29,7 +29,7 @@ const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; nam
     { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Malá polička s předním dorazem a dvěma zámky' },
   ] },
   { name: 'Dekorace a dárky', types: [
-    { value: 'name-ornament', name: 'Ozdoba se jménem', description: 'Závěsná ozdoba s vystouplým vektorovým nápisem' },
+    { value: 'name-ornament', name: 'Vánoční ozdoba se jménem', description: 'Jednodílný průřez s rámem a motivy pro CNC frézku' },
   ] },
 ]
 
@@ -81,9 +81,9 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
         </section>
         <section className="section">
           <div className="section__title"><Ruler size={15} /><span>Základní rozměry</span></div>
-          <RangeControl label={isOrnament ? 'Velikost ozdoby' : 'Šířka'} value={settings.gadgetWidth} min={isOrnament ? 50 : 60} max={isOrnament ? 240 : 300} step={5} unit=" mm" onChange={(v) => onChange('gadgetWidth', v)} />
+          <RangeControl label={isOrnament ? 'Průměr baňky' : 'Šířka'} value={settings.gadgetWidth} min={isOrnament ? 80 : 60} max={300} step={5} unit=" mm" onChange={(v) => onChange('gadgetWidth', v)} />
           {!isOrnament && <RangeControl label={isSkadis ? 'Vyložení od desky' : settings.type === 'phone-stand' || settings.type === 'headphone-stand' ? 'Hloubka základny' : 'Hloubka'} value={settings.gadgetDepth} min={20} max={240} step={5} unit=" mm" onChange={(v) => onChange('gadgetDepth', v)} />}
-          <RangeControl label={isSkadis ? 'Tloušťka tisku' : 'Tloušťka materiálu'} value={settings.materialThickness} min={isOrnament ? 1.5 : 3} max={isOrnament ? 12 : 30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
+          <RangeControl label={isSkadis ? 'Tloušťka tisku' : 'Tloušťka materiálu'} value={settings.materialThickness} min={3} max={30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
         </section>
 
         {isOrnament && (
@@ -94,16 +94,17 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
               <input type="text" value={settings.ornamentName} maxLength={14} placeholder="ANNA" onChange={(event) => onChange('ornamentName', event.target.value)} />
             </label>
             <label className="select-control">
-              <span>Tvar ozdoby</span>
+              <span>Vánoční motiv</span>
               <select value={settings.ornamentStyle} onChange={(event) => onChange('ornamentStyle', event.target.value as GadgetSettings['ornamentStyle'])}>
-                <option value="round">Kulatá</option>
-                <option value="star">Hvězda</option>
-                <option value="hexagon">Šestihran</option>
+                <option value="snowflake">Vločka a hvězdy</option>
+                <option value="trees">Stromečky a hvězdy</option>
+                <option value="bells">Zvonečky a baňky</option>
               </select>
             </label>
-            <RangeControl label="Výška vystouplého jména" value={settings.ornamentRelief} min={0.6} max={4} step={0.2} unit=" mm" onChange={(v) => onChange('ornamentRelief', v)} />
+            <RangeControl label="Šířka obvodového rámu" value={settings.ornamentFrameWidth} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentFrameWidth', v)} />
+            <RangeControl label="Minimální šířka můstků" value={settings.ornamentBridgeWidth} min={2.4} max={10} step={0.2} unit=" mm" onChange={(v) => onChange('ornamentBridgeWidth', v)} />
             <RangeControl label="Otvor pro zavěšení" value={settings.ornamentHangingHole} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentHangingHole', v)} />
-            <p className="section-note">Diakritika se v modelu převede na znaky bez háčků a čárek. SVG a DXF obsahují černý obrys pro řezání a modrou vrstvu jména pro gravírování. STL a 3MF mají jméno vystouplé.</p>
+            <p className="section-note">Jednodílný průřez spojuje rám, jméno i vánoční motivy. SVG a DXF obsahují vnější obrys a všechny vnitřní výřezy pro CNC. Diakritika se převede na znaky bez háčků a čárek.</p>
           </section>
         )}
 

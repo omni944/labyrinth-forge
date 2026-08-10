@@ -1,9 +1,11 @@
 import * as THREE from 'three'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import helvetikerBold from 'three/examples/fonts/helvetiker_bold.typeface.json'
+import polygonClipping, { type MultiPolygon, type Polygon } from 'polygon-clipping'
 import type { GadgetGeometryData, GadgetPart, GadgetPrimitive, GadgetSettings, TemplateHole, TemplatePoint } from '../types'
 
 const ornamentFont = new FontLoader().parse(helvetikerBold)
+const { difference: polygonDifference, union: polygonUnion } = polygonClipping
 
 function rectangle(width: number, depth: number, centerZ = 0): TemplatePoint[] {
   return [
@@ -18,12 +20,52 @@ function basePart(name: string, outline: TemplatePoint[], thickness: number): Ga
   return { name, outline, holes: [], cutouts: [], thickness, position: [0, 0, 0], rotation: [0, 0, 0] }
 }
 
-function radialOutline(radius: number, count: number, innerRatio = 1): TemplatePoint[] {
+function radialOutline(radius: number, count: number, innerRatio = 1, centerX = 0, centerZ = 0, rotation = Math.PI / 2): TemplatePoint[] {
   return Array.from({ length: count }, (_, index) => {
     const pointRadius = index % 2 === 0 ? radius : radius * innerRatio
-    const angle = Math.PI / 2 - (index / count) * Math.PI * 2
-    return { x: Math.cos(angle) * pointRadius, z: Math.sin(angle) * pointRadius }
+    const angle = rotation - (index / count) * Math.PI * 2
+    return { x: centerX + Math.cos(angle) * pointRadius, z: centerZ + Math.sin(angle) * pointRadius }
   })
+}
+
+function closedPolygon(outline: TemplatePoint[]): Polygon {
+  const ring: [number, number][] = outline.map((point) => [point.x, point.z])
+  ring.push([...ring[0]])
+  return [ring]
+}
+
+function circlePolygon(radius: number, centerX = 0, centerZ = 0, segments = 72) {
+  return closedPolygon(radialOutline(radius, segments, 1, centerX, centerZ))
+}
+
+function rectanglePolygon(width: number, height: number, centerX: number, centerZ: number, rotation = 0) {
+  const halfWidth = width / 2
+  const halfHeight = height / 2
+  const cosine = Math.cos(rotation)
+  const sine = Math.sin(rotation)
+  const outline = [
+    { x: -halfWidth, z: -halfHeight },
+    { x: halfWidth, z: -halfHeight },
+    { x: halfWidth, z: halfHeight },
+    { x: -halfWidth, z: halfHeight },
+  ].map((point) => ({
+    x: centerX + point.x * cosine - point.z * sine,
+    z: centerZ + point.x * sine + point.z * cosine,
+  }))
+  return closedPolygon(outline)
+}
+
+function polygonParts(name: string, geometry: MultiPolygon, thickness: number): GadgetPart[] {
+  return geometry.map((polygon, index) => ({
+    name: geometry.length === 1 ? name : `${name}-${index + 1}`,
+    outline: polygon[0].slice(0, -1).map(([x, z]) => ({ x, z })),
+    holes: [],
+    cutouts: polygon.slice(1).map((ring) => ({ outline: ring.slice(0, -1).map(([x, z]) => ({ x, z })) })),
+    thickness,
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    operation: 'cut',
+  }))
 }
 
 export function normalizeOrnamentName(value: string) {
@@ -31,7 +73,7 @@ export function normalizeOrnamentName(value: string) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
-    .replace(/[^A-Z0-9 &-]/g, '')
+    .replace(/[^A-Z0-9 ]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 14) || 'ANNA'
@@ -315,22 +357,7 @@ function skadisShelf(settings: GadgetSettings): GadgetGeometryData {
   }
 }
 
-function nameOrnament(settings: GadgetSettings): GadgetGeometryData {
-  const size = settings.gadgetWidth
-  const radius = size / 2
-  const outline = settings.ornamentStyle === 'star'
-    ? radialOutline(radius, 10, 0.54)
-    : settings.ornamentStyle === 'hexagon'
-      ? radialOutline(radius, 6)
-      : radialOutline(radius, 72)
-  const body = basePart('ozdoba-obrys', outline, settings.materialThickness)
-  body.holes.push({
-    x: 0,
-    z: settings.ornamentStyle === 'star' ? radius * 0.68 : radius * 0.72,
-    diameter: settings.ornamentHangingHole,
-  })
-
-  const name = normalizeOrnamentName(settings.ornamentName)
+function ornamentNamePolygons(name: string, targetWidth: number, targetHeight: number): Polygon[] {
   const shapes = ornamentFont.generateShapes(name, 100)
   const sampled = shapes.map((shape) => ({
     outline: shape.getPoints(8),
@@ -341,32 +368,140 @@ function nameOrnament(settings: GadgetSettings): GadgetGeometryData {
   const maxX = Math.max(...points.map((point) => point.x))
   const minZ = Math.min(...points.map((point) => point.y))
   const maxZ = Math.max(...points.map((point) => point.y))
-  const rawWidth = Math.max(1, maxX - minX)
-  const rawHeight = Math.max(1, maxZ - minZ)
-  const scale = Math.min((size * 0.76) / rawWidth, (size * 0.24) / rawHeight)
+  const scaleZ = targetHeight / Math.max(1, maxZ - minZ)
+  const scaleX = Math.min(scaleZ, targetWidth / Math.max(1, maxX - minX))
   const centerX = (minX + maxX) / 2
   const centerZ = (minZ + maxZ) / 2
-  const textCenterZ = -size * 0.06
-  const reliefOverlap = Math.min(0.4, settings.ornamentRelief / 2)
-  const textParts = sampled.map((shape, index): GadgetPart => ({
-    name: `jmeno-${index + 1}`,
-    outline: shape.outline.map((point) => ({ x: (point.x - centerX) * scale, z: (point.y - centerZ) * scale + textCenterZ })),
-    holes: [],
-    cutouts: shape.holes.map((hole) => ({
-      outline: hole.map((point) => ({ x: (point.x - centerX) * scale, z: (point.y - centerZ) * scale + textCenterZ })),
-    })),
-    thickness: settings.ornamentRelief + reliefOverlap,
-    position: [0, settings.materialThickness - reliefOverlap, 0],
-    rotation: [0, 0, 0],
-    operation: 'engrave',
-  }))
+  return sampled.map((shape) => {
+    const rings = [shape.outline, ...shape.holes].map((ring) => {
+      const points: [number, number][] = ring.map((point) => [(point.x - centerX) * scaleX, (point.y - centerZ) * scaleZ])
+      points.push([...points[0]])
+      return points
+    })
+    return rings
+  })
+}
 
+function bellPolygon(centerX: number, centerZ: number, width: number, height: number) {
+  const outline: TemplatePoint[] = [
+    { x: centerX - width * 0.16, z: centerZ + height * 0.5 },
+    { x: centerX + width * 0.16, z: centerZ + height * 0.5 },
+    { x: centerX + width * 0.3, z: centerZ + height * 0.34 },
+    { x: centerX + width * 0.4, z: centerZ - height * 0.28 },
+    { x: centerX + width * 0.55, z: centerZ - height * 0.42 },
+    { x: centerX - width * 0.55, z: centerZ - height * 0.42 },
+    { x: centerX - width * 0.4, z: centerZ - height * 0.28 },
+    { x: centerX - width * 0.3, z: centerZ + height * 0.34 },
+  ]
+  return closedPolygon(outline)
+}
+
+function christmasMotifPolygons(style: GadgetSettings['ornamentStyle'], innerRadius: number, nameHalfHeight: number, bridge: number): Polygon[] {
+  const topStart = nameHalfHeight - bridge * 0.25
+  const topEnd = innerRadius + bridge * 0.7
+  const bottomStart = -nameHalfHeight + bridge * 0.25
+  const bottomEnd = -innerRadius - bridge * 0.7
+  const topSpace = topEnd - topStart
+  const bottomSpace = bottomStart - bottomEnd
+  const solids: Polygon[] = []
+
+  if (style === 'snowflake') {
+    const centerZ = (topStart + topEnd) / 2
+    solids.push(rectanglePolygon(bridge, topSpace, 0, centerZ))
+    solids.push(rectanglePolygon(bridge, topSpace * 0.88, 0, centerZ, Math.PI / 3))
+    solids.push(rectanglePolygon(bridge, topSpace * 0.88, 0, centerZ, -Math.PI / 3))
+    const starRadius = Math.min(innerRadius * 0.12, bottomSpace * 0.2)
+    ;[-innerRadius * 0.47, 0, innerRadius * 0.47].forEach((x, index) => {
+      const center = bottomStart - bottomSpace * (index === 1 ? 0.62 : 0.48)
+      solids.push(rectanglePolygon(bridge, bottomStart - center + starRadius, x, (bottomStart + center - starRadius) / 2))
+      solids.push(closedPolygon(radialOutline(starRadius, 10, 0.44, x, center)))
+    })
+  } else if (style === 'trees') {
+    const starRadius = Math.min(innerRadius * 0.115, topSpace * 0.19)
+    ;[-innerRadius * 0.46, 0, innerRadius * 0.46].forEach((x, index) => {
+      const center = topStart + topSpace * (index === 1 ? 0.58 : 0.46)
+      solids.push(rectanglePolygon(bridge, topEnd - center + starRadius, x, (topEnd + center - starRadius) / 2))
+      solids.push(closedPolygon(radialOutline(starRadius, 10, 0.44, x, center)))
+    })
+    const treeHeight = bottomSpace * 0.92
+    const treeWidth = innerRadius * 0.42
+    ;[-innerRadius * 0.47, 0, innerRadius * 0.47].forEach((x) => {
+      solids.push(rectanglePolygon(bridge, treeHeight, x, bottomStart - treeHeight / 2))
+      ;[0.33, 0.58, 0.82].forEach((ratio, tier) => {
+        const tierTop = bottomStart - treeHeight * (tier * 0.18 + 0.08)
+        const tierWidth = treeWidth * ratio
+        solids.push(closedPolygon([
+          { x, z: tierTop + bridge * 0.65 },
+          { x: x + tierWidth / 2, z: tierTop - treeHeight * 0.32 },
+          { x: x - tierWidth / 2, z: tierTop - treeHeight * 0.32 },
+        ]))
+      })
+    })
+  } else {
+    const bellHeight = topSpace * 0.58
+    const bellWidth = innerRadius * 0.43
+    ;[-innerRadius * 0.27, innerRadius * 0.27].forEach((x) => {
+      const center = topStart + topSpace * 0.47
+      solids.push(rectanglePolygon(bridge, topEnd - center + bellHeight * 0.5, x, (topEnd + center - bellHeight * 0.5) / 2))
+      solids.push(bellPolygon(x, center, bellWidth, bellHeight))
+      solids.push(circlePolygon(bridge * 0.75, x, center - bellHeight * 0.5))
+    })
+    const baubleRadius = Math.min(innerRadius * 0.13, bottomSpace * 0.22)
+    ;[-innerRadius * 0.47, 0, innerRadius * 0.47].forEach((x, index) => {
+      const center = bottomStart - bottomSpace * (index === 1 ? 0.63 : 0.5)
+      solids.push(rectanglePolygon(bridge, bottomStart - center + baubleRadius, x, (bottomStart + center - baubleRadius) / 2))
+      solids.push(circlePolygon(baubleRadius, x, center))
+    })
+  }
+  return solids
+}
+
+function nameOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const size = settings.gadgetWidth
+  const radius = size / 2
+  const frame = Math.min(size * 0.14, Math.max(2.5, settings.ornamentFrameWidth))
+  const bridge = Math.min(size * 0.1, Math.max(2.4, settings.ornamentBridgeWidth))
+  const innerRadius = radius - frame
+  const capWidth = size * 0.27
+  const capHeight = size * 0.11
+  const loopRadius = size * 0.09
+  const loopCenterZ = radius + capHeight + loopRadius * 0.55
+
+  const outerSolid = polygonUnion(
+    circlePolygon(radius),
+    rectanglePolygon(capWidth, capHeight + 2, 0, radius + capHeight / 2 - 1),
+    circlePolygon(loopRadius, 0, loopCenterZ),
+  )
+  const frameGeometry = polygonDifference(outerSolid, circlePolygon(innerRadius))
+  const nameHeight = size * 0.215
+  const nameHalfHeight = nameHeight / 2
+  const railWidth = innerRadius * 2 + frame * 1.2
+  const name = normalizeOrnamentName(settings.ornamentName)
+  const namePolygons = ornamentNamePolygons(name, innerRadius * 1.7, nameHeight + bridge * 0.5)
+  const solids: Polygon[] = [
+    rectanglePolygon(railWidth, bridge, 0, nameHalfHeight),
+    rectanglePolygon(railWidth, bridge, 0, -nameHalfHeight),
+    ...namePolygons,
+    ...christmasMotifPolygons(settings.ornamentStyle, innerRadius, nameHalfHeight, bridge),
+  ]
+  let assembled = polygonUnion(frameGeometry, ...solids)
+
+  const maximumHoleRadius = Math.max(1.5, loopRadius - bridge * 0.75)
+  const hangingHoleRadius = Math.min(settings.ornamentHangingHole / 2, maximumHoleRadius)
+  const capSlots = [-1, 0, 1].map((index) => rectanglePolygon(bridge * 0.55, capHeight * 0.52, index * capWidth * 0.23, radius + capHeight * 0.42))
+  assembled = polygonDifference(assembled, circlePolygon(hangingHoleRadius, 0, loopCenterZ), ...capSlots)
+
+  const allPoints = assembled.flatMap((polygon) => polygon[0])
+  const minX = Math.min(...allPoints.map(([x]) => x))
+  const maxX = Math.max(...allPoints.map(([x]) => x))
+  const minZ = Math.min(...allPoints.map(([, z]) => z))
+  const maxZ = Math.max(...allPoints.map(([, z]) => z))
   return {
-    parts: [body, ...textParts],
+    parts: polygonParts('vanocni-ozdoba', assembled, settings.materialThickness),
     primitives: [],
-    width: size,
-    depth: size,
-    height: settings.materialThickness + settings.ornamentRelief,
+    width: maxX - minX,
+    depth: maxZ - minZ,
+    height: settings.materialThickness,
     layout: 'assembled',
   }
 }

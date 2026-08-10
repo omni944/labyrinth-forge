@@ -100,8 +100,9 @@ const INITIAL_GADGET_SETTINGS: GadgetSettings = {
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
   ornamentName: 'ANNA',
-  ornamentStyle: 'round',
-  ornamentRelief: 1.4,
+  ornamentStyle: 'snowflake',
+  ornamentFrameWidth: 4,
+  ornamentBridgeWidth: 3.2,
   ornamentHangingHole: 5,
 }
 
@@ -169,7 +170,7 @@ function App() {
                     : type === 'skadis-shelf'
                       ? { materialThickness: 4, gadgetWidth: 140, gadgetDepth: 80, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4 }
                       : type === 'name-ornament'
-                        ? { materialThickness: 3, gadgetWidth: 90, gadgetDepth: 90, ornamentName: 'ANNA', ornamentStyle: 'round', ornamentRelief: 1.4, ornamentHangingHole: 5 }
+                        ? { materialThickness: 6, gadgetWidth: 120, gadgetDepth: 150, ornamentName: 'ANNA', ornamentStyle: 'snowflake', ornamentFrameWidth: 5, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
                       : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
       setGadgetSettings((current) => ({ ...current, ...preset, type }))
       return

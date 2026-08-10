@@ -16,7 +16,7 @@ export type GadgetType =
   | 'skadis-shelf'
   | 'name-ornament'
 
-export type OrnamentStyle = 'round' | 'star' | 'hexagon'
+export type OrnamentStyle = 'snowflake' | 'trees' | 'bells'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -163,7 +163,8 @@ export interface GadgetSettings {
   skadisBackClearance: number
   ornamentName: string
   ornamentStyle: OrnamentStyle
-  ornamentRelief: number
+  ornamentFrameWidth: number
+  ornamentBridgeWidth: number
   ornamentHangingHole: number
 }
 
