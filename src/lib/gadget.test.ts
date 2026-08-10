@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import * as THREE from 'three'
 import { build3MFModelXML } from './export'
 import { buildGadgetDXF, buildGadgetSVG, createGadgetGroup, generateGadget, normalizeOrnamentName } from './gadget'
 import type { GadgetSettings } from '../types'
@@ -85,26 +86,38 @@ describe('generateGadget', () => {
     expect(data.height).toBe(settings.standHeight)
   })
 
-  it('SKÅDIS háček obsahuje průchozí krček, zadní zámek a přední doraz', () => {
+  it('SKÅDIS háček obsahuje souvislý nosný J-hák, spodní stabilizátor a přední doraz', () => {
     const data = generateGadget({ ...settings, type: 'skadis-hook', materialThickness: 4, gadgetWidth: 60, gadgetDepth: 40 })
     expect(data.parts).toHaveLength(0)
-    expect(data.primitives.some((primitive) => primitive.name === 'skadis-krcek-1')).toBe(true)
-    expect(data.primitives.some((primitive) => primitive.name === 'skadis-zamek-1' && primitive.position[2] < -settings.skadisPanelThickness)).toBe(true)
+    const mount = data.primitives.find((primitive) => primitive.name === 'skadis-nosny-hak-1')
+    expect(mount?.kind).toBe('profile')
+    if (mount?.kind === 'profile') {
+      expect(Math.min(...mount.outline.map((point) => point.x))).toBeLessThan(-settings.skadisPanelThickness)
+      expect(Math.max(...mount.outline.map((point) => point.z)) - Math.min(...mount.outline.map((point) => point.z))).toBeGreaterThanOrEqual(11)
+    }
+    expect(data.primitives.some((primitive) => primitive.name === 'skadis-stabilizator-1')).toBe(true)
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-hacek-doraz')).toBe(true)
   })
 
-  it('SKÅDIS držák nástrojů má dva zámky a parametrické otvory', () => {
+  it('SKÅDIS držák nástrojů má dva J-háky, stabilizátory a parametrické otvory', () => {
     const data = generateGadget({ ...settings, type: 'skadis-tool-holder', toolColumns: 4 })
     expect(data.parts).toHaveLength(1)
     expect(data.parts[0].holes).toHaveLength(4)
-    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-nosny-hak-'))).toHaveLength(2)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-stabilizator-'))).toHaveLength(2)
   })
 
-  it('SKÅDIS polička obsahuje plochu, čelo a dva montážní zámky', () => {
+  it('SKÅDIS polička obsahuje plochu, čelo a dva nosné J-háky', () => {
     const data = generateGadget({ ...settings, type: 'skadis-shelf' })
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-plocha')).toBe(true)
     expect(data.primitives.some((primitive) => primitive.name === 'skadis-policka-celo')).toBe(true)
-    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
+    expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-nosny-hak-'))).toHaveLength(2)
+  })
+
+  it('profil J-háku se převede na uzavřenou exportovatelnou 3D geometrii', () => {
+    const group = createGadgetGroup(generateGadget({ ...settings, type: 'skadis-tool-holder' }))
+    const hook = group.getObjectByName('skadis-nosny-hak-1') as THREE.Mesh | undefined
+    expect(hook?.geometry.getAttribute('position').count).toBeGreaterThan(20)
   })
 
   it('vánoční ozdoba vytvoří jeden spojený CNC průřez s vnitřními výřezy', () => {
@@ -123,7 +136,7 @@ describe('generateGadget', () => {
     expect(normalizeOrnamentName('abcdefghijklmnop')).toHaveLength(14)
   })
 
-  it.each(['snowflake', 'trees', 'bells'] as const)('motiv %s zůstane jedním vyrobitelným dílem', (ornamentStyle) => {
+  it.each(['snowflake', 'trees', 'bells', 'reindeer', 'village', 'holly', 'angel', 'gifts'] as const)('motiv %s zůstane jedním vyrobitelným dílem', (ornamentStyle) => {
     const data = generateGadget({ ...settings, type: 'name-ornament', gadgetWidth: 120, ornamentStyle, ornamentName: 'KRISTYNA 2026' })
     expect(data.parts).toHaveLength(1)
     expect(data.parts[0].cutouts.length).toBeGreaterThan(4)
