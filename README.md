@@ -47,6 +47,9 @@ Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových org
 - parametrický SKÅDIS háček s jedním zadním zámkem,
 - SKÅDIS držák nástrojů s nastavitelnými otvory a dvěma zámky,
 - SKÅDIS polička s předním dorazem a dvěma zámky,
+- osobní závěsná ozdoba se jménem v kulatém, hvězdicovém nebo šestihranném tvaru,
+- oddělená řezací a gravírovací vrstva ozdoby v DXF a SVG a vystouplé jméno v STL/3MF,
+- gadgety rozdělené do kategorií Dílna, Stojánky, SKÅDIS a Dekorace,
 - DXF a SVG rozložení jednotlivých dílů pro CNC obrábění,
 - STL a generic 3MF v milimetrech pro Bambu Studio a další slicery.
 

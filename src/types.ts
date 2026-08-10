@@ -14,6 +14,9 @@ export type GadgetType =
   | 'skadis-hook'
   | 'skadis-tool-holder'
   | 'skadis-shelf'
+  | 'name-ornament'
+
+export type OrnamentStyle = 'round' | 'star' | 'hexagon'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -158,6 +161,10 @@ export interface GadgetSettings {
   skadisSlotHeight: number
   skadisMountSpacing: number
   skadisBackClearance: number
+  ornamentName: string
+  ornamentStyle: OrnamentStyle
+  ornamentRelief: number
+  ornamentHangingHole: number
 }
 
 export interface GadgetCutout {
@@ -172,6 +179,7 @@ export interface GadgetPart {
   thickness: number
   position: [number, number, number]
   rotation: [number, number, number]
+  operation?: 'cut' | 'engrave'
 }
 
 export interface GadgetPrimitive {
@@ -188,4 +196,5 @@ export interface GadgetGeometryData {
   width: number
   depth: number
   height: number
+  layout?: 'parts' | 'assembled'
 }

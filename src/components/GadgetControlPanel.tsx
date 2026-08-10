@@ -1,4 +1,4 @@
-import { Battery, Box, Cable, CircleDot, Download, Gamepad2, Grip, Headphones, KeyRound, Ruler, Smartphone, Wrench } from 'lucide-react'
+import { Battery, Box, Cable, CircleDot, Download, Gamepad2, Gift, Grip, Headphones, KeyRound, Ruler, Smartphone, Wrench } from 'lucide-react'
 import type { GadgetSettings, GadgetType, GeneratorMode } from '../types'
 import { GeneratorSwitcher } from './GeneratorSwitcher'
 
@@ -12,16 +12,25 @@ interface Props {
   exporting: string | null
 }
 
-const TYPES: Array<{ value: GadgetType; name: string; description: string }> = [
-  { value: 'cable-comb', name: 'Kabelový hřeben', description: 'Organizér nabíjecích a datových kabelů' },
-  { value: 'tool-rack', name: 'Stojan na nástroje', description: 'Rastr otvorů pro vrtáky, frézy nebo pera' },
-  { value: 'phone-stand', name: 'Stojánek na telefon', description: 'Skládací základna a šikmá opěrka' },
-  { value: 'key-rack', name: 'Věšák na klíče', description: 'Nástěnná lišta se zářezy a montážními otvory' },
-  { value: 'battery-holder', name: 'Držák baterií', description: 'Vrtaná horní deska se samostatným pevným dnem' },
-  { value: 'headphone-stand', name: 'Stojan na sluchátka', description: 'Dvoudílný stojan se širokou horní opěrkou' },
-  { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Jednoduchý závěsný háček s jedním zámkem' },
-  { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Výsuvná deska s otvory a dvěma zámky' },
-  { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Malá polička s předním dorazem a dvěma zámky' },
+const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; name: string; description: string }> }> = [
+  { name: 'Dílna a organizace', types: [
+    { value: 'cable-comb', name: 'Kabelový hřeben', description: 'Organizér nabíjecích a datových kabelů' },
+    { value: 'tool-rack', name: 'Stojan na nástroje', description: 'Rastr otvorů pro vrtáky, frézy nebo pera' },
+    { value: 'key-rack', name: 'Věšák na klíče', description: 'Nástěnná lišta se zářezy a montážními otvory' },
+    { value: 'battery-holder', name: 'Držák baterií', description: 'Vrtaná horní deska se samostatným pevným dnem' },
+  ] },
+  { name: 'Stojánky', types: [
+    { value: 'phone-stand', name: 'Stojánek na telefon', description: 'Skládací základna a šikmá opěrka' },
+    { value: 'headphone-stand', name: 'Stojan na sluchátka', description: 'Dvoudílný stojan se širokou horní opěrkou' },
+  ] },
+  { name: 'SKÅDIS doplňky', types: [
+    { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Jednoduchý závěsný háček s jedním zámkem' },
+    { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Výsuvná deska s otvory a dvěma zámky' },
+    { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Malá polička s předním dorazem a dvěma zámky' },
+  ] },
+  { name: 'Dekorace a dárky', types: [
+    { value: 'name-ornament', name: 'Ozdoba se jménem', description: 'Závěsná ozdoba s vystouplým vektorovým nápisem' },
+  ] },
 ]
 
 function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
@@ -43,6 +52,7 @@ function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
 
 export function GadgetControlPanel({ settings, partCount, mode, onModeChange, onChange, onExport, exporting }: Props) {
   const isSkadis = settings.type.startsWith('skadis-')
+  const isOrnament = settings.type === 'name-ornament'
   return (
     <aside className="panel">
       <div className="panel__brand">
@@ -53,21 +63,49 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
         <section className="section section--generator"><GeneratorSwitcher mode={mode} onChange={onModeChange} /></section>
         <section className="section">
           <div className="section__title"><Gamepad2 size={15} /><span>Typ gadgetu</span></div>
-          <div className="style-list">
-            {TYPES.map((type) => (
-              <button key={type.value} className={`style-card ${settings.type === type.value ? 'is-active' : ''}`} onClick={() => onChange('type', type.value)}>
-                <span className="style-card__radio" />
-                <span><strong>{type.name}</strong><small>{type.description}</small></span>
-              </button>
+          <div className="gadget-sections">
+            {TYPE_SECTIONS.map((group) => (
+              <div className="gadget-category" key={group.name}>
+                <h3>{group.name}</h3>
+                <div className="style-list">
+                  {group.types.map((type) => (
+                    <button key={type.value} className={`style-card ${settings.type === type.value ? 'is-active' : ''}`} onClick={() => onChange('type', type.value)}>
+                      <span className="style-card__radio" />
+                      <span><strong>{type.name}</strong><small>{type.description}</small></span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </section>
         <section className="section">
           <div className="section__title"><Ruler size={15} /><span>Základní rozměry</span></div>
-          <RangeControl label="Šířka" value={settings.gadgetWidth} min={60} max={300} step={5} unit=" mm" onChange={(v) => onChange('gadgetWidth', v)} />
-          <RangeControl label={isSkadis ? 'Vyložení od desky' : settings.type === 'phone-stand' || settings.type === 'headphone-stand' ? 'Hloubka základny' : 'Hloubka'} value={settings.gadgetDepth} min={20} max={240} step={5} unit=" mm" onChange={(v) => onChange('gadgetDepth', v)} />
-          <RangeControl label={isSkadis ? 'Tloušťka tisku' : 'Tloušťka materiálu'} value={settings.materialThickness} min={3} max={30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
+          <RangeControl label={isOrnament ? 'Velikost ozdoby' : 'Šířka'} value={settings.gadgetWidth} min={isOrnament ? 50 : 60} max={isOrnament ? 240 : 300} step={5} unit=" mm" onChange={(v) => onChange('gadgetWidth', v)} />
+          {!isOrnament && <RangeControl label={isSkadis ? 'Vyložení od desky' : settings.type === 'phone-stand' || settings.type === 'headphone-stand' ? 'Hloubka základny' : 'Hloubka'} value={settings.gadgetDepth} min={20} max={240} step={5} unit=" mm" onChange={(v) => onChange('gadgetDepth', v)} />}
+          <RangeControl label={isSkadis ? 'Tloušťka tisku' : 'Tloušťka materiálu'} value={settings.materialThickness} min={isOrnament ? 1.5 : 3} max={isOrnament ? 12 : 30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
         </section>
+
+        {isOrnament && (
+          <section className="section section--accent">
+            <div className="section__title"><Gift size={15} /><span>Osobní ozdoba</span></div>
+            <label className="text-control">
+              <span>Jméno nebo krátký text</span>
+              <input type="text" value={settings.ornamentName} maxLength={14} placeholder="ANNA" onChange={(event) => onChange('ornamentName', event.target.value)} />
+            </label>
+            <label className="select-control">
+              <span>Tvar ozdoby</span>
+              <select value={settings.ornamentStyle} onChange={(event) => onChange('ornamentStyle', event.target.value as GadgetSettings['ornamentStyle'])}>
+                <option value="round">Kulatá</option>
+                <option value="star">Hvězda</option>
+                <option value="hexagon">Šestihran</option>
+              </select>
+            </label>
+            <RangeControl label="Výška vystouplého jména" value={settings.ornamentRelief} min={0.6} max={4} step={0.2} unit=" mm" onChange={(v) => onChange('ornamentRelief', v)} />
+            <RangeControl label="Otvor pro zavěšení" value={settings.ornamentHangingHole} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentHangingHole', v)} />
+            <p className="section-note">Diakritika se v modelu převede na znaky bez háčků a čárek. SVG a DXF obsahují černý obrys pro řezání a modrou vrstvu jména pro gravírování. STL a 3MF mají jméno vystouplé.</p>
+          </section>
+        )}
 
         {settings.type === 'cable-comb' && (
           <section className="section section--accent">
@@ -159,7 +197,7 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
         )}
       </div>
       <div className="panel__footer">
-        <div className="export-summary"><span>{isSkadis ? 'SKÅDIS · 3D tisk' : 'CNC + Bambu Studio'}</span><strong>{isSkadis ? '1 model' : `${partCount} ${partCount === 1 ? 'díl' : 'díly'}`}</strong></div>
+        <div className="export-summary"><span>{isSkadis ? 'SKÅDIS · 3D tisk' : isOrnament ? 'CNC / laser + 3D tisk' : 'CNC + Bambu Studio'}</span><strong>{isSkadis || isOrnament ? '1 model' : `${partCount} ${partCount === 1 ? 'díl' : 'díly'}`}</strong></div>
         <div className={`export-row ${isSkadis ? '' : 'export-row--four'}`}>
           {!isSkadis && <button onClick={() => onExport('dxf')} disabled={Boolean(exporting)}><Download size={15} />DXF</button>}
           {!isSkadis && <button onClick={() => onExport('svg')} disabled={Boolean(exporting)}><Download size={15} />SVG</button>}

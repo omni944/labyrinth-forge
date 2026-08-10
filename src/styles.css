@@ -36,6 +36,9 @@ button { color: inherit; }
 .section__title { display: flex; align-items: center; gap: 8px; margin-bottom: 17px; color: #c8cbc0; text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: .13em; }
 .section__title svg { color: var(--acid); }
 .style-list { display: grid; gap: 7px; }
+.gadget-sections { display: grid; gap: 18px; }
+.gadget-category { display: grid; gap: 8px; }
+.gadget-category h3 { margin: 0; color: #777b70; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
 .style-card { width: 100%; display: grid; grid-template-columns: 17px 1fr; gap: 11px; padding: 11px 12px; text-align: left; border: 1px solid transparent; border-radius: 6px; background: #20211e; cursor: pointer; transition: .15s ease; }
 .style-card:hover { border-color: #41433c; transform: translateX(1px); }
 .style-card.is-active { border-color: rgba(185, 237, 63, .6); background: rgba(185, 237, 63, .07); }
@@ -76,6 +79,9 @@ button { color: inherit; }
 .section-note { margin: 14px 0 0; color: #85897d; font-size: 9px; line-height: 1.5; }
 .select-control { display: grid; gap: 7px; margin-bottom: 14px; color: #a8aba1; font-size: 11px; }
 .select-control select { width: 100%; height: 36px; padding: 0 10px; border: 1px solid #44473f; border-radius: 4px; color: #e6e8de; background: #20211e; cursor: pointer; }
+.text-control { display: grid; gap: 7px; margin-bottom: 14px; color: #a8aba1; font-size: 11px; }
+.text-control input { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #44473f; border-radius: 4px; color: #f0f2e9; background: #20211e; font-family: 'DM Mono', monospace; font-size: 12px; text-transform: uppercase; outline: none; }
+.text-control input:focus { border-color: rgba(185, 237, 63, .75); box-shadow: 0 0 0 2px rgba(185, 237, 63, .08); }
 
 .workspace { min-width: 0; min-height: 0; display: grid; grid-template-rows: 82px minmax(0, 1fr) 66px; }
 .workspace__header { display: flex; justify-content: space-between; align-items: center; padding: 0 28px; border-bottom: 1px solid var(--line); background: #151613; }
