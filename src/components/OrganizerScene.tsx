@@ -10,6 +10,7 @@ function BinModel({ bin, settings, color, showLabel }: { bin: OrganizerBin; sett
   useEffect(() => () => {
     geometries.bottom.dispose()
     geometries.walls.dispose()
+    geometries.dividers.forEach((geometry) => geometry.dispose())
   }, [geometries])
   return (
     <group position={[bin.x, 0, bin.z]}>
@@ -19,6 +20,11 @@ function BinModel({ bin, settings, color, showLabel }: { bin: OrganizerBin; sett
       <mesh geometry={geometries.walls} castShadow receiveShadow>
         <meshStandardMaterial color={color} roughness={0.58} metalness={0.04} side={THREE.DoubleSide} />
       </mesh>
+      {geometries.dividers.map((geometry, index) => (
+        <mesh key={index} geometry={geometry} castShadow receiveShadow>
+          <meshStandardMaterial color={color} roughness={0.58} metalness={0.04} />
+        </mesh>
+      ))}
       {showLabel && (
         <Html position={[0, settings.bottomThickness + 0.3, 0]} center distanceFactor={Math.max(settings.drawerWidth, settings.drawerDepth) * 0.8}>
           <span className="bin-label">{bin.id}</span>

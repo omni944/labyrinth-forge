@@ -72,7 +72,10 @@ function recursiveBins(settings: OrganizerSettings): Rect[] {
 
 export function generateOrganizer(settings: OrganizerSettings): OrganizerBin[] {
   const bins = settings.layout === 'grid' ? gridBins(settings) : recursiveBins(settings)
-  return bins.map((bin, index) => ({ ...bin, id: index + 1 }))
+  return bins.map((bin, index) => {
+    const id = index + 1
+    return { ...bin, id, divider: settings.binDividers[id] ?? 'none' }
+  })
 }
 
 function roundedRectShape(width: number, depth: number, radius: number) {
@@ -117,16 +120,32 @@ export function createBinGeometries(bin: OrganizerBin, settings: OrganizerSettin
   wallShape.holes.push(hole)
   const walls = extrudeShape(wallShape, Math.max(0.2, settings.binHeight - settings.bottomThickness))
   walls.translate(0, settings.bottomThickness, 0)
-  return { bottom, walls }
+  const dividerHeight = Math.max(0.2, settings.binHeight - settings.bottomThickness)
+  const dividerY = settings.bottomThickness + dividerHeight / 2
+  const dividerWidth = Math.max(0.2, bin.width - settings.wallThickness * 2)
+  const dividerDepth = Math.max(0.2, bin.depth - settings.wallThickness * 2)
+  const dividers: THREE.BufferGeometry[] = []
+  if (bin.divider === 'halves' || bin.divider === 'quarters') {
+    const geometry = new THREE.BoxGeometry(settings.wallThickness, dividerHeight, dividerDepth)
+    geometry.translate(0, dividerY, 0)
+    dividers.push(geometry)
+  }
+  if (bin.divider === 'quarters') {
+    const geometry = new THREE.BoxGeometry(dividerWidth, dividerHeight, settings.wallThickness)
+    geometry.translate(0, dividerY, 0)
+    dividers.push(geometry)
+  }
+  return { bottom, walls, dividers }
 }
 
 export function createBinGroup(bin: OrganizerBin, settings: OrganizerSettings, atOrigin = false) {
   const group = new THREE.Group()
-  const { bottom, walls } = createBinGeometries(bin, settings)
+  const { bottom, walls, dividers } = createBinGeometries(bin, settings)
   const material = new THREE.MeshStandardMaterial({ color: 0xb9ed3f, roughness: 0.64 })
   const bottomMesh = new THREE.Mesh(bottom, material)
   const wallMesh = new THREE.Mesh(walls, material)
   group.add(bottomMesh, wallMesh)
+  dividers.forEach((geometry) => group.add(new THREE.Mesh(geometry, material)))
   if (!atOrigin) group.position.set(bin.x, 0, bin.z)
   group.updateMatrixWorld(true)
   return group

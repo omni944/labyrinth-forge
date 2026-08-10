@@ -10,7 +10,9 @@ import { createTemplateGroup } from './template'
 function buildExportGroup(data: MazeGeometryData, settings: MazeSettings) {
   const group = new THREE.Group()
   const material = new THREE.MeshStandardMaterial({ color: 0xc8ff3d, roughness: 0.72 })
-  const floorGeometry = new THREE.BoxGeometry(data.width, settings.floorThickness, data.depth)
+  const floorGeometry = data.shape === 'circular'
+    ? new THREE.CylinderGeometry(data.radius ?? data.width / 2, data.radius ?? data.width / 2, settings.floorThickness, 96)
+    : new THREE.BoxGeometry(data.width, settings.floorThickness, data.depth)
   const floor = new THREE.Mesh(floorGeometry, material)
   floor.position.y = settings.floorThickness / 2
   group.add(floor)
@@ -19,6 +21,7 @@ function buildExportGroup(data: MazeGeometryData, settings: MazeSettings) {
     const geometry = new THREE.BoxGeometry(wall.width, settings.wallHeight, wall.depth)
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.set(wall.x, settings.floorThickness + settings.wallHeight / 2, wall.z)
+    mesh.rotation.y = wall.rotation ?? 0
     group.add(mesh)
   }
   group.updateMatrixWorld(true)
