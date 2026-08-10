@@ -99,6 +99,7 @@ const INITIAL_GADGET_SETTINGS: GadgetSettings = {
   skadisSlotHeight: 15,
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
+  skadisEdgeRadius: 2,
   ornamentName: 'ANNA',
   ornamentStyle: 'snowflake',
   ornamentFrameWidth: 4,
@@ -164,11 +165,19 @@ function App() {
               : type === 'headphone-stand'
                 ? { materialThickness: 12, gadgetWidth: 180, gadgetDepth: 150, standHeight: 240, stemWidth: 42, headrestWidth: 110, fitClearance: 0.4 }
                 : type === 'skadis-hook'
-                  ? { materialThickness: 4, gadgetWidth: 60, gadgetDepth: 40, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4 }
+                  ? { materialThickness: 4, gadgetWidth: 60, gadgetDepth: 40, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4, skadisEdgeRadius: 0 }
                   : type === 'skadis-tool-holder'
-                    ? { materialThickness: 4, gadgetWidth: 100, gadgetDepth: 55, toolColumns: 4, toolHoleDiameter: 18, toolMargin: 14, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4 }
+                    ? { materialThickness: 4, gadgetWidth: 100, gadgetDepth: 55, toolColumns: 4, toolHoleDiameter: 18, toolMargin: 14, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
+                    : type === 'skadis-pliers-holder'
+                      ? { materialThickness: 5, gadgetWidth: 120, gadgetDepth: 65, toolColumns: 3, toolHoleDiameter: 16, toolMargin: 18, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
+                      : type === 'skadis-drill-bit-holder'
+                        ? { materialThickness: 4, gadgetWidth: 120, gadgetDepth: 55, toolRows: 3, toolColumns: 7, toolHoleDiameter: 6, toolMargin: 10, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4, skadisEdgeRadius: 1.5 }
+                        : type === 'skadis-spool-holder'
+                          ? { materialThickness: 5, gadgetWidth: 100, gadgetDepth: 70, toolColumns: 2, toolMargin: 22, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 40, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
+                          : type === 'skadis-container'
+                            ? { materialThickness: 4, gadgetWidth: 120, gadgetDepth: 75, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
                     : type === 'skadis-shelf'
-                      ? { materialThickness: 4, gadgetWidth: 140, gadgetDepth: 80, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4 }
+                      ? { materialThickness: 4, gadgetWidth: 140, gadgetDepth: 80, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
                       : type === 'name-ornament'
                         ? { materialThickness: 6, gadgetWidth: 120, gadgetDepth: 150, ornamentName: 'ANNA', ornamentStyle: 'snowflake', ornamentFrameWidth: 5, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
                       : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }

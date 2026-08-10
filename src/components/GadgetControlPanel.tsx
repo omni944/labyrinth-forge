@@ -25,7 +25,11 @@ const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; nam
   ] },
   { name: 'SKÅDIS doplňky', types: [
     { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Nosný J-hák se spodním stabilizačním kolíkem' },
-    { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Deska s otvory, dvěma J-háky a stabilizátory' },
+    { value: 'skadis-tool-holder', name: 'SKÅDIS držák šroubováků', description: 'Jedna řada otvorů pro šroubováky, pilníky nebo pera' },
+    { value: 'skadis-pliers-holder', name: 'SKÅDIS držák kleští', description: 'Otevřené drážky pro kleště, nůžky a podobné nástroje' },
+    { value: 'skadis-drill-bit-holder', name: 'SKÅDIS držák vrtáků', description: 'Dvě vodicí desky s rastrem otvorů pro vrtáky' },
+    { value: 'skadis-spool-holder', name: 'SKÅDIS držák cívek', description: 'Vodorovné trny s koncovými dorazy pro cívky' },
+    { value: 'skadis-container', name: 'SKÅDIS box', description: 'Otevřený zásobník na drobné nářadí a materiál' },
     { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Polička se dvěma J-háky a spodními kolíky' },
   ] },
   { name: 'Dekorace a dárky', types: [
@@ -189,7 +193,9 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
             {settings.type !== 'skadis-hook' && <RangeControl label="Rozteč zámků" value={settings.skadisMountSpacing} min={20} max={80} step={20} unit=" mm" onChange={(v) => onChange('skadisMountSpacing', v)} />}
             <RangeControl label="Vůle v drážce" value={settings.fitClearance} min={0.1} max={1.2} step={0.1} unit=" mm" onChange={(v) => onChange('fitClearance', v)} />
             <RangeControl label="Vůle za deskou" value={settings.skadisBackClearance} min={0.1} max={1.5} step={0.1} unit=" mm" onChange={(v) => onChange('skadisBackClearance', v)} />
+            {settings.type !== 'skadis-hook' && <RangeControl label="Zaoblení hran těla" value={settings.skadisEdgeRadius} min={0} max={6} step={0.5} unit=" mm" onChange={(v) => onChange('skadisEdgeRadius', v)} />}
             <p className="section-note">Nosný J-hák se zasune horní částí drážky a po spuštění zachytí za deskou; spodní kolík brání vyklopení. Nejdřív vytiskněte testovací kus a dolaďte vůle podle své desky.</p>
+            {settings.type !== 'skadis-hook' && <p className="section-note">Zaoblení se použije jen na tělo doplňku. J-háky a stabilizátory zůstávají rozměrově přesné a bez zaoblení.</p>}
           </section>
         )}
 
@@ -199,6 +205,35 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
             <RangeControl label="Počet otvorů" value={settings.toolColumns} min={1} max={8} onChange={(v) => onChange('toolColumns', v)} />
             <RangeControl label="Průměr otvorů" value={settings.toolHoleDiameter} min={5} max={35} step={0.5} unit=" mm" onChange={(v) => onChange('toolHoleDiameter', v)} />
             <RangeControl label="Okrajová vzdálenost" value={settings.toolMargin} min={8} max={30} step={1} unit=" mm" onChange={(v) => onChange('toolMargin', v)} />
+          </section>
+        )}
+
+        {settings.type === 'skadis-pliers-holder' && (
+          <section className="section">
+            <div className="section__title"><Wrench size={15} /><span>Drážky pro kleště</span></div>
+            <RangeControl label="Počet drážek" value={settings.toolColumns} min={1} max={6} onChange={(v) => onChange('toolColumns', v)} />
+            <RangeControl label="Šířka drážek" value={settings.toolHoleDiameter} min={8} max={32} step={0.5} unit=" mm" onChange={(v) => onChange('toolHoleDiameter', v)} />
+            <RangeControl label="Okrajová vzdálenost" value={settings.toolMargin} min={8} max={30} step={1} unit=" mm" onChange={(v) => onChange('toolMargin', v)} />
+          </section>
+        )}
+
+        {settings.type === 'skadis-drill-bit-holder' && (
+          <section className="section">
+            <div className="section__title"><CircleDot size={15} /><span>Rastr vrtáků</span></div>
+            <div className="two-columns">
+              <RangeControl label="Sloupce" value={settings.toolColumns} min={2} max={10} onChange={(v) => onChange('toolColumns', v)} />
+              <RangeControl label="Řádky" value={settings.toolRows} min={1} max={5} onChange={(v) => onChange('toolRows', v)} />
+            </div>
+            <RangeControl label="Průměr otvorů" value={settings.toolHoleDiameter} min={2} max={14} step={0.5} unit=" mm" onChange={(v) => onChange('toolHoleDiameter', v)} />
+            <RangeControl label="Okrajová vzdálenost" value={settings.toolMargin} min={6} max={24} step={1} unit=" mm" onChange={(v) => onChange('toolMargin', v)} />
+          </section>
+        )}
+
+        {settings.type === 'skadis-spool-holder' && (
+          <section className="section">
+            <div className="section__title"><CircleDot size={15} /><span>Trny pro cívky</span></div>
+            <RangeControl label="Počet trnů" value={settings.toolColumns} min={1} max={4} onChange={(v) => onChange('toolColumns', v)} />
+            <RangeControl label="Okrajová vzdálenost" value={settings.toolMargin} min={10} max={35} step={1} unit=" mm" onChange={(v) => onChange('toolMargin', v)} />
           </section>
         )}
       </div>
