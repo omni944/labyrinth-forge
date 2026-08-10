@@ -1,4 +1,4 @@
-import { Battery, Box, Cable, CircleDot, Download, Gamepad2, Headphones, KeyRound, Ruler, Smartphone } from 'lucide-react'
+import { Battery, Box, Cable, CircleDot, Download, Gamepad2, Grip, Headphones, KeyRound, Ruler, Smartphone, Wrench } from 'lucide-react'
 import type { GadgetSettings, GadgetType, GeneratorMode } from '../types'
 import { GeneratorSwitcher } from './GeneratorSwitcher'
 
@@ -19,6 +19,9 @@ const TYPES: Array<{ value: GadgetType; name: string; description: string }> = [
   { value: 'key-rack', name: 'Věšák na klíče', description: 'Nástěnná lišta se zářezy a montážními otvory' },
   { value: 'battery-holder', name: 'Držák baterií', description: 'Vrtaná horní deska se samostatným pevným dnem' },
   { value: 'headphone-stand', name: 'Stojan na sluchátka', description: 'Dvoudílný stojan se širokou horní opěrkou' },
+  { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Jednoduchý závěsný háček s jedním zámkem' },
+  { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Výsuvná deska s otvory a dvěma zámky' },
+  { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Malá polička s předním dorazem a dvěma zámky' },
 ]
 
 function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
@@ -39,6 +42,7 @@ function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
 }
 
 export function GadgetControlPanel({ settings, partCount, mode, onModeChange, onChange, onExport, exporting }: Props) {
+  const isSkadis = settings.type.startsWith('skadis-')
   return (
     <aside className="panel">
       <div className="panel__brand">
@@ -61,8 +65,8 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
         <section className="section">
           <div className="section__title"><Ruler size={15} /><span>Základní rozměry</span></div>
           <RangeControl label="Šířka" value={settings.gadgetWidth} min={60} max={300} step={5} unit=" mm" onChange={(v) => onChange('gadgetWidth', v)} />
-          <RangeControl label={settings.type === 'phone-stand' || settings.type === 'headphone-stand' ? 'Hloubka základny' : 'Hloubka'} value={settings.gadgetDepth} min={40} max={240} step={5} unit=" mm" onChange={(v) => onChange('gadgetDepth', v)} />
-          <RangeControl label="Tloušťka materiálu" value={settings.materialThickness} min={3} max={30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
+          <RangeControl label={isSkadis ? 'Vyložení od desky' : settings.type === 'phone-stand' || settings.type === 'headphone-stand' ? 'Hloubka základny' : 'Hloubka'} value={settings.gadgetDepth} min={20} max={240} step={5} unit=" mm" onChange={(v) => onChange('gadgetDepth', v)} />
+          <RangeControl label={isSkadis ? 'Tloušťka tisku' : 'Tloušťka materiálu'} value={settings.materialThickness} min={3} max={30} step={0.5} unit=" mm" onChange={(v) => onChange('materialThickness', v)} />
         </section>
 
         {settings.type === 'cable-comb' && (
@@ -129,12 +133,36 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
             <RangeControl label="Vůle spoje" value={settings.fitClearance} min={0.1} max={1.2} step={0.1} unit=" mm" onChange={(v) => onChange('fitClearance', v)} />
           </section>
         )}
+
+        {isSkadis && (
+          <section className="section section--accent">
+            <div className="section__title"><Grip size={15} /><span>SKÅDIS zámek</span></div>
+            <div className="two-columns">
+              <RangeControl label="Šířka drážky" value={settings.skadisSlotWidth} min={3} max={8} step={0.1} unit=" mm" onChange={(v) => onChange('skadisSlotWidth', v)} />
+              <RangeControl label="Výška drážky" value={settings.skadisSlotHeight} min={10} max={22} step={0.5} unit=" mm" onChange={(v) => onChange('skadisSlotHeight', v)} />
+            </div>
+            <RangeControl label="Tloušťka desky" value={settings.skadisPanelThickness} min={3} max={8} step={0.2} unit=" mm" onChange={(v) => onChange('skadisPanelThickness', v)} />
+            {settings.type !== 'skadis-hook' && <RangeControl label="Rozteč zámků" value={settings.skadisMountSpacing} min={20} max={80} step={20} unit=" mm" onChange={(v) => onChange('skadisMountSpacing', v)} />}
+            <RangeControl label="Vůle v drážce" value={settings.fitClearance} min={0.1} max={1.2} step={0.1} unit=" mm" onChange={(v) => onChange('fitClearance', v)} />
+            <RangeControl label="Vůle za deskou" value={settings.skadisBackClearance} min={0.1} max={1.5} step={0.1} unit=" mm" onChange={(v) => onChange('skadisBackClearance', v)} />
+            <p className="section-note">Nejdřív vytiskněte testovací kus a dolaďte vůle podle své desky, tiskárny a materiálu.</p>
+          </section>
+        )}
+
+        {settings.type === 'skadis-tool-holder' && (
+          <section className="section">
+            <div className="section__title"><Wrench size={15} /><span>Otvory pro nástroje</span></div>
+            <RangeControl label="Počet otvorů" value={settings.toolColumns} min={1} max={8} onChange={(v) => onChange('toolColumns', v)} />
+            <RangeControl label="Průměr otvorů" value={settings.toolHoleDiameter} min={5} max={35} step={0.5} unit=" mm" onChange={(v) => onChange('toolHoleDiameter', v)} />
+            <RangeControl label="Okrajová vzdálenost" value={settings.toolMargin} min={8} max={30} step={1} unit=" mm" onChange={(v) => onChange('toolMargin', v)} />
+          </section>
+        )}
       </div>
       <div className="panel__footer">
-        <div className="export-summary"><span>CNC + Bambu Studio</span><strong>{partCount} {partCount === 1 ? 'díl' : 'díly'}</strong></div>
-        <div className="export-row export-row--four">
-          <button onClick={() => onExport('dxf')} disabled={Boolean(exporting)}><Download size={15} />DXF</button>
-          <button onClick={() => onExport('svg')} disabled={Boolean(exporting)}><Download size={15} />SVG</button>
+        <div className="export-summary"><span>{isSkadis ? 'SKÅDIS · 3D tisk' : 'CNC + Bambu Studio'}</span><strong>{isSkadis ? '1 model' : `${partCount} ${partCount === 1 ? 'díl' : 'díly'}`}</strong></div>
+        <div className={`export-row ${isSkadis ? '' : 'export-row--four'}`}>
+          {!isSkadis && <button onClick={() => onExport('dxf')} disabled={Boolean(exporting)}><Download size={15} />DXF</button>}
+          {!isSkadis && <button onClick={() => onExport('svg')} disabled={Boolean(exporting)}><Download size={15} />SVG</button>}
           <button onClick={() => onExport('stl')} disabled={Boolean(exporting)}><Download size={15} />STL</button>
           <button onClick={() => onExport('3mf')} disabled={Boolean(exporting)}><Download size={15} />3MF</button>
         </div>

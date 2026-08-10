@@ -44,6 +44,9 @@ Webová aplikace pro parametrické generování 3D labyrintů, zásuvkových org
 - nástěnný věšák na klíče se zářezy a montážními otvory,
 - dvouvrstvý držák tužkových i větších baterií s nastavitelným rastrem, vůlí a pevným dnem,
 - dvoudílný stojan na sluchátka se spojovacím slotem a širokou horní opěrkou,
+- parametrický SKÅDIS háček s jedním zadním zámkem,
+- SKÅDIS držák nástrojů s nastavitelnými otvory a dvěma zámky,
+- SKÅDIS polička s předním dorazem a dvěma zámky,
 - DXF a SVG rozložení jednotlivých dílů pro CNC obrábění,
 - STL a generic 3MF v milimetrech pro Bambu Studio a další slicery.
 
@@ -70,3 +73,5 @@ npm run build
 STL je bez jednotek; hodnoty aplikace jsou navržené jako milimetry, což odpovídá běžnému nastavení slicerů.
 
 Výchozí SKÅDIS rastr je určený jako nastavitelný výrobní základ. Před obráběním celé desky doporučujeme ověřit rozměr drážky, rozteč a vůli na malém vzorku s konkrétním příslušenstvím.
+
+Také závěsné SKÅDIS gadgety mají nastavitelnou tloušťku desky, rozměr drážky, rozteč zámků a dvě výrobní vůle. Před tiskem finálního doplňku doporučujeme vytisknout háček jako testovací kus a hodnoty doladit podle konkrétní desky, materiálu a kalibrace tiskárny.

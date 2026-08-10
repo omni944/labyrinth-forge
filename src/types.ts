@@ -11,6 +11,9 @@ export type GadgetType =
   | 'key-rack'
   | 'battery-holder'
   | 'headphone-stand'
+  | 'skadis-hook'
+  | 'skadis-tool-holder'
+  | 'skadis-shelf'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -150,6 +153,11 @@ export interface GadgetSettings {
   standHeight: number
   stemWidth: number
   headrestWidth: number
+  skadisPanelThickness: number
+  skadisSlotWidth: number
+  skadisSlotHeight: number
+  skadisMountSpacing: number
+  skadisBackClearance: number
 }
 
 export interface GadgetCutout {
@@ -166,8 +174,17 @@ export interface GadgetPart {
   rotation: [number, number, number]
 }
 
+export interface GadgetPrimitive {
+  name: string
+  kind: 'box'
+  size: [number, number, number]
+  position: [number, number, number]
+  rotation: [number, number, number]
+}
+
 export interface GadgetGeometryData {
   parts: GadgetPart[]
+  primitives: GadgetPrimitive[]
   width: number
   depth: number
   height: number
