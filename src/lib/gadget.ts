@@ -551,6 +551,113 @@ function leafPolygon(centerX: number, centerZ: number, length: number, width: nu
   })))
 }
 
+function ellipsePolygon(radiusX: number, radiusZ: number, centerX: number, centerZ: number, rotation = 0, segments = 32) {
+  const cosine = Math.cos(rotation)
+  const sine = Math.sin(rotation)
+  const outline = Array.from({ length: segments }, (_, index) => {
+    const angle = (index / segments) * Math.PI * 2
+    const x = Math.cos(angle) * radiusX
+    const z = Math.sin(angle) * radiusZ
+    return { x: centerX + x * cosine - z * sine, z: centerZ + x * sine + z * cosine }
+  })
+  return closedPolygon(outline)
+}
+
+function segmentPolygon(fromX: number, fromZ: number, toX: number, toZ: number, width: number) {
+  const length = Math.hypot(toX - fromX, toZ - fromZ)
+  const angle = Math.atan2(toZ - fromZ, toX - fromX)
+  return rectanglePolygon(length + width * 0.55, width, (fromX + toX) / 2, (fromZ + toZ) / 2, angle)
+}
+
+function polylinePolygons(points: Array<[number, number]>, width: number) {
+  return points.slice(1).map(([toX, toZ], index) => segmentPolygon(points[index][0], points[index][1], toX, toZ, width))
+}
+
+function unionPolygons(base: MultiPolygon, polygons: Polygon[]) {
+  return polygons.reduce<MultiPolygon>((geometry, polygon) => polygonUnion(geometry, polygon), base)
+}
+
+function pineTreePolygons(centerX: number, baseZ: number, width: number, height: number, bridge: number): Polygon[] {
+  const tiers = [
+    { z: baseZ + height * 0.82, width: width * 0.5, drop: height * 0.32 },
+    { z: baseZ + height * 0.6, width: width * 0.78, drop: height * 0.4 },
+    { z: baseZ + height * 0.36, width, drop: height * 0.43 },
+  ]
+  return [
+    rectanglePolygon(bridge, height * 0.28, centerX, baseZ + height * 0.12),
+    ...tiers.map((tier) => closedPolygon([
+      { x: centerX, z: tier.z + height * 0.2 },
+      { x: centerX + tier.width / 2, z: tier.z - tier.drop / 2 },
+      { x: centerX + tier.width * 0.18, z: tier.z - tier.drop * 0.4 },
+      { x: centerX, z: tier.z - tier.drop * 0.62 },
+      { x: centerX - tier.width * 0.18, z: tier.z - tier.drop * 0.4 },
+      { x: centerX - tier.width / 2, z: tier.z - tier.drop / 2 },
+    ])),
+  ]
+}
+
+type OrnamentShell = {
+  radius: number
+  innerRadius: number
+  frame: number
+  bridge: number
+  capWidth: number
+  capHeight: number
+  loopRadius: number
+  loopCenterZ: number
+  outerSolid: MultiPolygon
+  frameGeometry: MultiPolygon
+}
+
+function ornamentShell(settings: GadgetSettings): OrnamentShell {
+  const size = settings.gadgetWidth
+  const radius = size / 2
+  const frame = Math.min(size * 0.14, Math.max(2.5, settings.ornamentFrameWidth))
+  const bridge = Math.min(size * 0.1, Math.max(2.4, settings.ornamentBridgeWidth))
+  const innerRadius = radius - frame
+  const capWidth = size * 0.27
+  const capHeight = size * 0.11
+  const loopRadius = size * 0.09
+  const loopCenterZ = radius + capHeight + loopRadius * 0.55
+  const outerSolid = polygonUnion(
+    circlePolygon(radius),
+    rectanglePolygon(capWidth, capHeight + 2, 0, radius + capHeight / 2 - 1),
+    circlePolygon(loopRadius, 0, loopCenterZ),
+  )
+  return {
+    radius,
+    innerRadius,
+    frame,
+    bridge,
+    capWidth,
+    capHeight,
+    loopRadius,
+    loopCenterZ,
+    outerSolid,
+    frameGeometry: polygonDifference(outerSolid, circlePolygon(innerRadius)),
+  }
+}
+
+function finishOrnament(name: string, geometry: MultiPolygon, settings: GadgetSettings, shell: OrnamentShell, decorativeCutouts: Polygon[] = []): GadgetGeometryData {
+  const maximumHoleRadius = Math.max(1.5, shell.loopRadius - shell.bridge * 0.75)
+  const hangingHoleRadius = Math.min(settings.ornamentHangingHole / 2, maximumHoleRadius)
+  const capSlots = [-1, 0, 1].map((index) => rectanglePolygon(shell.bridge * 0.55, shell.capHeight * 0.52, index * shell.capWidth * 0.23, shell.radius + shell.capHeight * 0.42))
+  const assembled = polygonDifference(geometry, circlePolygon(hangingHoleRadius, 0, shell.loopCenterZ), ...capSlots, ...decorativeCutouts)
+  const allPoints = assembled.flatMap((polygon) => polygon[0])
+  const minX = Math.min(...allPoints.map(([x]) => x))
+  const maxX = Math.max(...allPoints.map(([x]) => x))
+  const minZ = Math.min(...allPoints.map(([, z]) => z))
+  const maxZ = Math.max(...allPoints.map(([, z]) => z))
+  return {
+    parts: polygonParts(name, assembled, settings.materialThickness),
+    primitives: [],
+    width: maxX - minX,
+    depth: maxZ - minZ,
+    height: settings.materialThickness,
+    layout: 'assembled',
+  }
+}
+
 function hangingStarPolygons(xs: number[], startZ: number, endZ: number, radius: number, bridge: number): Polygon[] {
   return xs.flatMap((x, index) => {
     const centerZ = startZ + (endZ - startZ) * (index % 2 === 0 ? 0.52 : 0.68)
@@ -705,56 +812,193 @@ function christmasMotifPolygons(style: GadgetSettings['ornamentStyle'], innerRad
 }
 
 function nameOrnament(settings: GadgetSettings): GadgetGeometryData {
-  const size = settings.gadgetWidth
-  const radius = size / 2
-  const frame = Math.min(size * 0.14, Math.max(2.5, settings.ornamentFrameWidth))
-  const bridge = Math.min(size * 0.1, Math.max(2.4, settings.ornamentBridgeWidth))
-  const innerRadius = radius - frame
-  const capWidth = size * 0.27
-  const capHeight = size * 0.11
-  const loopRadius = size * 0.09
-  const loopCenterZ = radius + capHeight + loopRadius * 0.55
-
-  const outerSolid = polygonUnion(
-    circlePolygon(radius),
-    rectanglePolygon(capWidth, capHeight + 2, 0, radius + capHeight / 2 - 1),
-    circlePolygon(loopRadius, 0, loopCenterZ),
-  )
-  const frameGeometry = polygonDifference(outerSolid, circlePolygon(innerRadius))
-  const nameHeight = size * 0.215
+  const shell = ornamentShell(settings)
+  const nameHeight = settings.gadgetWidth * 0.215
   const nameHalfHeight = nameHeight / 2
-  const railWidth = innerRadius * 2 + frame * 1.2
+  const railWidth = shell.innerRadius * 2 + shell.frame * 1.2
   const name = normalizeOrnamentName(settings.ornamentName)
-  const namePolygons = ornamentNamePolygons(name, innerRadius * 1.7, nameHeight + bridge * 0.5)
+  const namePolygons = ornamentNamePolygons(name, shell.innerRadius * 1.7, nameHeight + shell.bridge * 0.5)
   const solids: Polygon[] = [
-    rectanglePolygon(railWidth, bridge, 0, nameHalfHeight),
-    rectanglePolygon(railWidth, bridge, 0, -nameHalfHeight),
+    rectanglePolygon(railWidth, shell.bridge, 0, nameHalfHeight),
+    rectanglePolygon(railWidth, shell.bridge, 0, -nameHalfHeight),
     ...namePolygons,
-    ...christmasMotifPolygons(settings.ornamentStyle, innerRadius, nameHalfHeight, bridge),
+    ...christmasMotifPolygons(settings.ornamentStyle, shell.innerRadius, nameHalfHeight, shell.bridge),
   ]
-  let assembled = polygonUnion(frameGeometry, ...solids)
+  return finishOrnament('vanocni-ozdoba', polygonUnion(shell.frameGeometry, ...solids), settings, shell)
+}
 
-  const maximumHoleRadius = Math.max(1.5, loopRadius - bridge * 0.75)
-  const hangingHoleRadius = Math.min(settings.ornamentHangingHole / 2, maximumHoleRadius)
-  const capSlots = [-1, 0, 1].map((index) => rectanglePolygon(bridge * 0.55, capHeight * 0.52, index * capWidth * 0.23, radius + capHeight * 0.42))
-  assembled = polygonDifference(assembled, circlePolygon(hangingHoleRadius, 0, loopCenterZ), ...capSlots)
+function mandalaOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const shell = ornamentShell(settings)
+  const r = shell.innerRadius
+  const cutouts: Polygon[] = [circlePolygon(Math.max(shell.bridge * 0.8, r * 0.055))]
 
-  const allPoints = assembled.flatMap((polygon) => polygon[0])
-  const minX = Math.min(...allPoints.map(([x]) => x))
-  const maxX = Math.max(...allPoints.map(([x]) => x))
-  const minZ = Math.min(...allPoints.map(([, z]) => z))
-  const maxZ = Math.max(...allPoints.map(([, z]) => z))
-  return {
-    parts: polygonParts('vanocni-ozdoba', assembled, settings.materialThickness),
-    primitives: [],
-    width: maxX - minX,
-    depth: maxZ - minZ,
-    height: settings.materialThickness,
-    layout: 'assembled',
-  }
+  Array.from({ length: 8 }, (_, index) => (index / 8) * Math.PI * 2).forEach((angle) => {
+    const distance = r * 0.22
+    cutouts.push(ellipsePolygon(r * 0.11, r * 0.045, Math.cos(angle) * distance, Math.sin(angle) * distance, angle))
+  })
+  Array.from({ length: 12 }, (_, index) => (index / 12) * Math.PI * 2 + Math.PI / 12).forEach((angle) => {
+    const distance = r * 0.48
+    cutouts.push(leafPolygon(Math.cos(angle) * distance, Math.sin(angle) * distance, r * 0.2, r * 0.095, angle))
+  })
+  Array.from({ length: 16 }, (_, index) => (index / 16) * Math.PI * 2).forEach((angle, index) => {
+    const distance = r * 0.76
+    const centerX = Math.cos(angle) * distance
+    const centerZ = Math.sin(angle) * distance
+    cutouts.push(ellipsePolygon(r * 0.09, r * 0.043, centerX, centerZ, angle))
+    const outerDistance = r * 0.89
+    cutouts.push(ellipsePolygon(r * 0.038, r * 0.02, Math.cos(angle + Math.PI / 32) * outerDistance, Math.sin(angle + Math.PI / 32) * outerDistance, angle + Math.PI / 32))
+    if (index % 2 === 0) {
+      const innerDistance = r * 0.62
+      cutouts.push(circlePolygon(r * 0.037, Math.cos(angle + Math.PI / 16) * innerDistance, Math.sin(angle + Math.PI / 16) * innerDistance, 28))
+    }
+  })
+  return finishOrnament('radialni-mandala', shell.outerSolid, settings, shell, cutouts)
+}
+
+function treeOfLifeOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const shell = ornamentShell(settings)
+  const r = shell.innerRadius
+  const b = shell.bridge
+  const solids: Polygon[] = [
+    closedPolygon([
+      { x: -b * 1.35, z: -r - b * 0.2 },
+      { x: -b * 0.95, z: -r * 0.3 },
+      { x: -b * 0.55, z: r * 0.18 },
+      { x: b * 0.62, z: r * 0.22 },
+      { x: b * 1.05, z: -r * 0.32 },
+      { x: b * 1.5, z: -r - b * 0.2 },
+    ]),
+    ...polylinePolygons([[0, r * 0.08], [0, r * 0.48], [0, r + b * 0.3]], b),
+  ]
+
+  ;[-1, 1].forEach((direction) => {
+    const branchSets: Array<Array<[number, number]>> = [
+      [[0, r * 0.02], [direction * r * 0.24, r * 0.28], [direction * r * 0.55, r * 0.5], [direction * r * 0.84, r * 0.55]],
+      [[0, r * 0.22], [direction * r * 0.2, r * 0.5], [direction * r * 0.47, r * 0.78], [direction * r * 0.58, r * 0.84]],
+      [[0, -r * 0.04], [direction * r * 0.31, r * 0.1], [direction * r * 0.68, r * 0.2], [direction * r * 0.92, r * 0.18]],
+    ]
+    branchSets.forEach((points, branchIndex) => {
+      solids.push(...polylinePolygons(points, b * (branchIndex === 2 ? 0.82 : 0.9)))
+      points.slice(1, -1).forEach(([x, z], pointIndex) => {
+        const leafAngle = direction * (0.42 + pointIndex * 0.22) + (branchIndex - 1) * 0.2
+        const leafX = x + direction * r * 0.08
+        const leafZ = z + r * (pointIndex % 2 === 0 ? 0.075 : -0.025)
+        solids.push(
+          segmentPolygon(x, z, leafX, leafZ, b * 0.58),
+          ellipsePolygon(r * 0.075, r * 0.034, leafX, leafZ, leafAngle),
+        )
+      })
+    })
+    const roots: Array<Array<[number, number]>> = [
+      [[0, -r * 0.26], [direction * r * 0.28, -r * 0.52], [direction * r * 0.7, -r * 0.72]],
+      [[direction * b * 0.4, -r * 0.32], [direction * r * 0.2, -r * 0.68], [direction * r * 0.43, -r * 0.91]],
+      [[0, -r * 0.44], [direction * r * 0.12, -r * 0.78], [direction * r * 0.18, -r - b * 0.3]],
+    ]
+    roots.forEach((points, index) => solids.push(...polylinePolygons(points, b * (0.92 - index * 0.1))))
+  })
+  return finishOrnament('strom-zivota', unionPolygons(shell.frameGeometry, solids), settings, shell)
+}
+
+function nordicSnowflakeOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const shell = ornamentShell(settings)
+  const r = shell.innerRadius
+  const b = shell.bridge
+  const cutouts: Polygon[] = []
+  const pointAt = (angle: number, distance: number): TemplatePoint => ({ x: Math.cos(angle) * distance, z: Math.sin(angle) * distance })
+  Array.from({ length: 6 }, (_, index) => Math.PI / 2 + ((index + 0.5) / 6) * Math.PI * 2).forEach((sectorAngle) => {
+    const halfAngle = Math.PI / 6 - Math.max(0.035, b / r * 0.48)
+    const left = sectorAngle - halfAngle
+    const right = sectorAngle + halfAngle
+    cutouts.push(closedPolygon([
+      pointAt(left, r * 0.2),
+      pointAt(left + 0.11, r * 0.38),
+      pointAt(left, r * 0.56),
+      pointAt(left + 0.095, r * 0.72),
+      pointAt(left, r * 0.9),
+      pointAt(right, r * 0.9),
+      pointAt(right - 0.095, r * 0.72),
+      pointAt(right, r * 0.56),
+      pointAt(right - 0.11, r * 0.38),
+      pointAt(right, r * 0.2),
+    ]))
+    const jewelDistance = r * 0.73
+    cutouts.push(leafPolygon(
+      Math.cos(sectorAngle) * jewelDistance,
+      Math.sin(sectorAngle) * jewelDistance,
+      r * 0.13,
+      r * 0.055,
+      sectorAngle,
+    ))
+  })
+  cutouts.push(circlePolygon(Math.max(1.4, b * 0.34)))
+  Array.from({ length: 6 }, (_, index) => Math.PI / 2 + (index / 6) * Math.PI * 2).forEach((angle) => {
+    cutouts.push(circlePolygon(Math.max(1.2, b * 0.28), Math.cos(angle) * r * 0.11, Math.sin(angle) * r * 0.11, 28))
+  })
+  return finishOrnament('severska-vlocka', shell.outerSolid, settings, shell, cutouts)
+}
+
+function woodlandOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const shell = ornamentShell(settings)
+  const r = shell.innerRadius
+  const b = shell.bridge
+  const groundZ = -r * 0.4
+  const solids: Polygon[] = [
+    rectanglePolygon(r * 2 + shell.frame, b * 1.15, 0, groundZ),
+    ...polylinePolygons([[-r - b, r * 0.03], [-r * 0.58, r * 0.38], [-r * 0.25, r * 0.08], [r * 0.12, r * 0.48], [r * 0.48, r * 0.12], [r + b, r * 0.34]], b * 0.72),
+    ...polylinePolygons([[-r - b, -r * 0.08], [-r * 0.45, r * 0.18], [-r * 0.12, -r * 0.08], [r * 0.28, r * 0.25], [r * 0.62, -r * 0.02], [r + b, r * 0.14]], b * 0.62),
+  ]
+  ;[
+    { x: -r * 0.62, w: r * 0.34, h: r * 0.88 },
+    { x: -r * 0.27, w: r * 0.28, h: r * 0.67 },
+    { x: r * 0.66, w: r * 0.31, h: r * 0.76 },
+  ].forEach((tree) => solids.push(...pineTreePolygons(tree.x, groundZ, tree.w, tree.h, b * 0.72)))
+
+  const moonX = -r * 0.25
+  const moonZ = r * 0.6
+  const moonRadius = r * 0.14
+  solids.push(
+    segmentPolygon(moonX, r + b, moonX, moonZ + moonRadius * 0.75, b * 0.68),
+    circlePolygon(moonRadius, moonX, moonZ),
+  )
+
+  const bodyX = r * 0.04
+  const bodyZ = -r * 0.16
+  solids.push(
+    ellipsePolygon(r * 0.21, r * 0.1, bodyX, bodyZ, 0.08),
+    segmentPolygon(bodyX + r * 0.15, bodyZ, bodyX + r * 0.26, r * 0.08, b),
+    ellipsePolygon(r * 0.085, r * 0.06, bodyX + r * 0.28, r * 0.13, 0.25),
+    segmentPolygon(bodyX - r * 0.1, bodyZ - r * 0.04, bodyX - r * 0.12, groundZ, b * 0.72),
+    segmentPolygon(bodyX + r * 0.11, bodyZ - r * 0.04, bodyX + r * 0.14, groundZ, b * 0.72),
+  )
+  ;[-1, 1].forEach((side) => {
+    const antlerBaseX = bodyX + r * 0.29
+    const antlerBaseZ = r * 0.17
+    const outerX = antlerBaseX + side * r * 0.09
+    const outerZ = r * 0.31
+    solids.push(
+      segmentPolygon(antlerBaseX, antlerBaseZ, outerX, outerZ, b * 0.58),
+      segmentPolygon(outerX, outerZ, outerX + side * r * 0.07, outerZ + r * 0.07, b * 0.52),
+      segmentPolygon(outerX, outerZ, outerX - side * r * 0.015, outerZ + r * 0.09, b * 0.52),
+    )
+  })
+  const crescentCutout = circlePolygon(moonRadius * 0.78, moonX + moonRadius * 0.52, moonZ + moonRadius * 0.18)
+  return finishOrnament('pulnocni-les', unionPolygons(shell.frameGeometry, solids), settings, shell, [crescentCutout])
+}
+
+function isOrnamentType(type: GadgetSettings['type']) {
+  return type.endsWith('-ornament')
+}
+
+function ornamentByType(settings: GadgetSettings) {
+  if (settings.type === 'mandala-ornament') return mandalaOrnament(settings)
+  if (settings.type === 'tree-of-life-ornament') return treeOfLifeOrnament(settings)
+  if (settings.type === 'nordic-snowflake-ornament') return nordicSnowflakeOrnament(settings)
+  if (settings.type === 'woodland-ornament') return woodlandOrnament(settings)
+  return nameOrnament(settings)
 }
 
 export function generateGadget(settings: GadgetSettings): GadgetGeometryData {
+  if (isOrnamentType(settings.type)) return ornamentByType(settings)
   if (settings.type === 'cable-comb') return cableComb(settings)
   if (settings.type === 'tool-rack') return toolRack(settings)
   if (settings.type === 'phone-stand') return phoneStand(settings)

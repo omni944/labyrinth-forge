@@ -40,8 +40,14 @@ const SKADIS_TYPE_SECTIONS: GadgetTypeSection[] = [
 ]
 
 const ORNAMENT_TYPE_SECTIONS: GadgetTypeSection[] = [
-  { name: 'Ozdoby pro CNC frézku', types: [
-    { value: 'name-ornament', name: 'Vánoční ozdoba se jménem', description: 'Jednodílný průřez s rámem a motivy pro CNC frézku' },
+  { name: 'Personalizované', types: [
+    { value: 'name-ornament', name: 'Baňka se jménem', description: 'Jméno propojené s osmi vánočními motivy' },
+  ] },
+  { name: 'Propracované dekory', types: [
+    { value: 'mandala-ornament', name: 'Radiální mandala', description: 'Tři prstence lístků, kapek a diamantových výřezů' },
+    { value: 'tree-of-life-ornament', name: 'Strom života', description: 'Rozvětvená koruna, jemné listy a kořeny v kruhovém rámu' },
+    { value: 'nordic-snowflake-ornament', name: 'Severská vločka', description: 'Šestiosá vločka s bočními větvemi a ornamentálními průřezy' },
+    { value: 'woodland-ornament', name: 'Půlnoční les', description: 'Vrstvené hory, smrky, jelen a zavěšený měsíc' },
   ] },
 ]
 
@@ -64,7 +70,8 @@ function RangeControl({ label, value, min, max, step = 1, unit, onChange }: {
 
 export function GadgetControlPanel({ settings, partCount, mode, onModeChange, onChange, onExport, exporting }: Props) {
   const isSkadis = settings.type.startsWith('skadis-')
-  const isOrnament = settings.type === 'name-ornament'
+  const isOrnament = settings.type.endsWith('-ornament')
+  const isNameOrnament = settings.type === 'name-ornament'
   const typeSections = mode === 'skadis' ? SKADIS_TYPE_SECTIONS : mode === 'ornament' ? ORNAMENT_TYPE_SECTIONS : GADGET_TYPE_SECTIONS
   const typeTitle = mode === 'skadis' ? 'Typ SKÅDIS doplňku' : mode === 'ornament' ? 'Typ CNC ozdoby' : 'Typ gadgetu'
   const TypeIcon = mode === 'skadis' ? Grip : mode === 'ornament' ? Gift : Gamepad2
@@ -103,28 +110,30 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
 
         {isOrnament && (
           <section className="section section--accent">
-            <div className="section__title"><Gift size={15} /><span>Osobní ozdoba</span></div>
-            <label className="text-control">
-              <span>Jméno nebo krátký text</span>
-              <input type="text" value={settings.ornamentName} maxLength={14} placeholder="ANNA" onChange={(event) => onChange('ornamentName', event.target.value)} />
-            </label>
-            <label className="select-control">
-              <span>Vánoční motiv</span>
-              <select value={settings.ornamentStyle} onChange={(event) => onChange('ornamentStyle', event.target.value as GadgetSettings['ornamentStyle'])}>
-                <option value="snowflake">Vločka a hvězdy</option>
-                <option value="trees">Stromečky a hvězdy</option>
-                <option value="bells">Zvonečky a baňky</option>
-                <option value="reindeer">Sob s parohy</option>
-                <option value="village">Zimní vesnice</option>
-                <option value="holly">Cesmína a baňky</option>
-                <option value="angel">Anděl a hvězdy</option>
-                <option value="gifts">Dárky a mašle</option>
-              </select>
-            </label>
+            <div className="section__title"><Gift size={15} /><span>{isNameOrnament ? 'Osobní ozdoba' : 'Konstrukce dekoru'}</span></div>
+            {isNameOrnament && <>
+              <label className="text-control">
+                <span>Jméno nebo krátký text</span>
+                <input type="text" value={settings.ornamentName} maxLength={14} placeholder="ANNA" onChange={(event) => onChange('ornamentName', event.target.value)} />
+              </label>
+              <label className="select-control">
+                <span>Vánoční motiv</span>
+                <select value={settings.ornamentStyle} onChange={(event) => onChange('ornamentStyle', event.target.value as GadgetSettings['ornamentStyle'])}>
+                  <option value="snowflake">Vločka a hvězdy</option>
+                  <option value="trees">Stromečky a hvězdy</option>
+                  <option value="bells">Zvonečky a baňky</option>
+                  <option value="reindeer">Sob s parohy</option>
+                  <option value="village">Zimní vesnice</option>
+                  <option value="holly">Cesmína a baňky</option>
+                  <option value="angel">Anděl a hvězdy</option>
+                  <option value="gifts">Dárky a mašle</option>
+                </select>
+              </label>
+            </>}
             <RangeControl label="Šířka obvodového rámu" value={settings.ornamentFrameWidth} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentFrameWidth', v)} />
             <RangeControl label="Minimální šířka můstků" value={settings.ornamentBridgeWidth} min={2.4} max={10} step={0.2} unit=" mm" onChange={(v) => onChange('ornamentBridgeWidth', v)} />
             <RangeControl label="Otvor pro zavěšení" value={settings.ornamentHangingHole} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentHangingHole', v)} />
-            <p className="section-note">Jednodílný průřez spojuje rám, jméno i vánoční motivy. SVG a DXF obsahují vnější obrys a všechny vnitřní výřezy pro CNC. Diakritika se převede na znaky bez háčků a čárek.</p>
+            <p className="section-note">{isNameOrnament ? 'Jednodílný průřez spojuje rám, jméno i vánoční motivy. Diakritika se převede na znaky bez háčků a čárek.' : 'Všechny detaily jsou parametricky propojené do jediného vyrobitelného dílu. Šířka můstků řídí odolnost jemných částí.'} SVG a DXF obsahují hotové vnější i vnitřní CNC kontury.</p>
           </section>
         )}
 

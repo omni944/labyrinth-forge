@@ -19,6 +19,10 @@ export type GadgetType =
   | 'skadis-drill-bit-holder'
   | 'skadis-spool-holder'
   | 'name-ornament'
+  | 'mandala-ornament'
+  | 'tree-of-life-ornament'
+  | 'nordic-snowflake-ornament'
+  | 'woodland-ornament'
 
 export type OrnamentStyle = 'snowflake' | 'trees' | 'bells' | 'reindeer' | 'village' | 'holly' | 'angel' | 'gifts'
 

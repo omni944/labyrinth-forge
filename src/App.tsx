@@ -180,6 +180,14 @@ function App() {
                       ? { materialThickness: 4, gadgetWidth: 140, gadgetDepth: 80, fitClearance: 0.4, skadisPanelThickness: 5, skadisSlotWidth: 5, skadisSlotHeight: 15, skadisMountSpacing: 80, skadisBackClearance: 0.4, skadisEdgeRadius: 2 }
                       : type === 'name-ornament'
                         ? { materialThickness: 6, gadgetWidth: 120, gadgetDepth: 150, ornamentName: 'ANNA', ornamentStyle: 'snowflake', ornamentFrameWidth: 5, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
+                        : type === 'mandala-ornament'
+                          ? { materialThickness: 6, gadgetWidth: 180, gadgetDepth: 180, ornamentFrameWidth: 6, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
+                          : type === 'tree-of-life-ornament'
+                            ? { materialThickness: 6, gadgetWidth: 180, gadgetDepth: 180, ornamentFrameWidth: 6, ornamentBridgeWidth: 5, ornamentHangingHole: 6 }
+                            : type === 'nordic-snowflake-ornament'
+                              ? { materialThickness: 6, gadgetWidth: 150, gadgetDepth: 150, ornamentFrameWidth: 5, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
+                              : type === 'woodland-ornament'
+                                ? { materialThickness: 6, gadgetWidth: 180, gadgetDepth: 180, ornamentFrameWidth: 6, ornamentBridgeWidth: 4.5, ornamentHangingHole: 6 }
                       : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
       setGadgetSettings((current) => ({ ...current, ...preset, type }))
       return
@@ -190,9 +198,9 @@ function App() {
   const changeMode = (nextMode: GeneratorMode) => {
     if (nextMode === 'skadis' && !gadgetSettings.type.startsWith('skadis-')) {
       updateGadgetSetting('type', 'skadis-hook')
-    } else if (nextMode === 'ornament' && gadgetSettings.type !== 'name-ornament') {
+    } else if (nextMode === 'ornament' && !gadgetSettings.type.endsWith('-ornament')) {
       updateGadgetSetting('type', 'name-ornament')
-    } else if (nextMode === 'gadget' && (gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type === 'name-ornament')) {
+    } else if (nextMode === 'gadget' && (gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type.endsWith('-ornament'))) {
       updateGadgetSetting('type', 'cable-comb')
     }
     setMode(nextMode)
@@ -330,7 +338,7 @@ function App() {
           <div className="metric">
             {mode === 'maze' ? <ScanLine size={16} /> : mode === 'organizer' ? <Grid3X3 size={16} /> : mode === 'template' ? <Wrench size={16} /> : mode === 'skadis' ? <Grip size={16} /> : mode === 'ornament' ? <Gift size={16} /> : <Gamepad2 size={16} />}
             <span>{mode === 'maze' ? 'Model' : mode === 'organizer' ? 'Sestava' : mode === 'template' ? 'Šablona' : mode === 'skadis' ? 'SKÅDIS doplněk' : mode === 'ornament' ? 'CNC ozdoba' : 'Gadget'}</span>
-            <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type === 'name-ornament' ? '1 tisknutelný model' : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
+            <strong>{mode === 'maze' ? settings.shape === 'circular' ? `${settings.rows} prstenců × ${settings.columns} sektorů` : `${settings.columns} × ${settings.rows} buněk` : mode === 'organizer' ? `${organizerBins.length} samostatných dílů` : mode === 'template' ? `${templateFeatureCount} ${templateFeatureUnit}` : gadgetSettings.type.startsWith('skadis-') || gadgetSettings.type.endsWith('-ornament') ? '1 souvislý model' : `${gadgetData.parts.length} výrobní ${gadgetData.parts.length === 1 ? 'díl' : 'díly'}`}</strong>
           </div>
           <div className="metric">
             <Ruler size={16} />
