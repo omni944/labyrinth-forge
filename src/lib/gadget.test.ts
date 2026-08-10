@@ -34,8 +34,9 @@ const settings: GadgetSettings = {
   skadisMountSpacing: 40,
   skadisBackClearance: 0.4,
   ornamentName: 'ANNA',
-  ornamentStyle: 'round',
-  ornamentRelief: 1.4,
+  ornamentStyle: 'snowflake',
+  ornamentFrameWidth: 5,
+  ornamentBridgeWidth: 4,
   ornamentHangingHole: 5,
 }
 
@@ -106,13 +107,14 @@ describe('generateGadget', () => {
     expect(data.primitives.filter((primitive) => primitive.name.startsWith('skadis-zamek-'))).toHaveLength(2)
   })
 
-  it('ozdoba vytvoří tělo, otvor na zavěšení a vystouplé vektorové jméno', () => {
-    const data = generateGadget({ ...settings, type: 'name-ornament', gadgetWidth: 90, materialThickness: 3, ornamentName: 'Eliška' })
+  it('vánoční ozdoba vytvoří jeden spojený CNC průřez s vnitřními výřezy', () => {
+    const data = generateGadget({ ...settings, type: 'name-ornament', gadgetWidth: 120, materialThickness: 6, ornamentName: 'Eliška' })
     expect(data.layout).toBe('assembled')
-    expect(data.parts[0].name).toBe('ozdoba-obrys')
-    expect(data.parts[0].holes[0].diameter).toBe(settings.ornamentHangingHole)
-    expect(data.parts.some((part) => part.operation === 'engrave')).toBe(true)
-    expect(data.height).toBe(3 + settings.ornamentRelief)
+    expect(data.parts).toHaveLength(1)
+    expect(data.parts[0].name).toBe('vanocni-ozdoba')
+    expect(data.parts[0].operation).toBe('cut')
+    expect(data.parts[0].cutouts.length).toBeGreaterThan(5)
+    expect(data.height).toBe(6)
   })
 
   it('jméno pro vestavěný vektorový font bezpečně normalizuje diakritiku a délku', () => {
@@ -121,13 +123,21 @@ describe('generateGadget', () => {
     expect(normalizeOrnamentName('abcdefghijklmnop')).toHaveLength(14)
   })
 
-  it('SVG a DXF ozdoby zachovají sestavení a oddělí gravírování jména', () => {
+  it.each(['snowflake', 'trees', 'bells'] as const)('motiv %s zůstane jedním vyrobitelným dílem', (ornamentStyle) => {
+    const data = generateGadget({ ...settings, type: 'name-ornament', gadgetWidth: 120, ornamentStyle, ornamentName: 'KRISTYNA 2026' })
+    expect(data.parts).toHaveLength(1)
+    expect(data.parts[0].cutouts.length).toBeGreaterThan(4)
+  })
+
+  it('SVG a DXF ozdoby obsahují vnější konturu a vnitřní CNC výřezy', () => {
     const data = generateGadget({ ...settings, type: 'name-ornament' })
     const svg = buildGadgetSVG(data)
     const dxf = buildGadgetDXF(data)
-    expect(svg).toContain('class="engraving"')
-    expect(svg).toContain('stroke:#1677ff')
-    expect(dxf).toContain('_ENGRAVING')
+    expect(svg).toContain('class="outline"')
+    expect(svg).toContain('class="cutout"')
+    expect(svg).not.toContain('class="engraving"')
+    expect(dxf).toContain('VANOCNI_OZDOBA_OUTLINE')
+    expect(dxf).toContain('VANOCNI_OZDOBA_CUTOUTS')
   })
 
   it('DXF stojánku rozloží jednotlivé díly do samostatných vrstev', () => {
