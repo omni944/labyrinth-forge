@@ -279,25 +279,39 @@ function boxPrimitive(name: string, size: [number, number, number], position: [n
   return { name, kind: 'box', size, position, rotation: [0, 0, 0] }
 }
 
+function profilePrimitive(name: string, outline: TemplatePoint[], extrusion: number, position: [number, number, number]): GadgetPrimitive {
+  return { name, kind: 'profile', outline, extrusion, position, rotation: [0, 0, 0] }
+}
+
 function skadisMount(settings: GadgetSettings, width: number, mountCount: 1 | 2) {
-  const bodyHeight = Math.max(36, settings.skadisSlotHeight + 18)
+  const bodyHeight = Math.max(50, settings.skadisSlotHeight + 32)
   const connectorWidth = Math.max(2.4, settings.skadisSlotWidth - settings.fitClearance)
-  const neckHeight = Math.max(3, Math.min(5, settings.skadisSlotHeight * 0.3))
-  const lockDrop = Math.max(5, settings.skadisSlotHeight - neckHeight - 1)
-  const lockThickness = Math.max(2.4, settings.materialThickness * 0.7)
+  const neckHeight = Math.max(3.2, Math.min(4.6, settings.skadisSlotHeight * 0.28))
+  const lockDrop = Math.max(11, settings.skadisSlotHeight - 1)
+  const lockThickness = Math.max(3.2, settings.materialThickness * 0.8)
   const behindPanel = settings.skadisPanelThickness + settings.skadisBackClearance
-  const bodyOverlap = 0.8
-  const neckDepth = behindPanel + bodyOverlap
-  const neckY = bodyHeight - neckHeight - 3
+  const bodyOverlap = 1
+  const hookTopY = bodyHeight - 3
+  const stabilizerY = hookTopY - 40
   const mountSpacing = Math.min(settings.skadisMountSpacing, Math.max(20, width - connectorWidth - 8))
   const xValues = mountCount === 1 ? [0] : [-mountSpacing / 2, mountSpacing / 2]
   const primitives: GadgetPrimitive[] = [
     boxPrimitive('skadis-predni-deska', [width, bodyHeight, settings.materialThickness], [0, bodyHeight / 2, settings.materialThickness / 2]),
   ]
   xValues.forEach((x, index) => {
+    const hookProfile: TemplatePoint[] = [
+      { x: bodyOverlap, z: hookTopY },
+      { x: -behindPanel - lockThickness, z: hookTopY },
+      { x: -behindPanel - lockThickness, z: hookTopY - neckHeight * 0.75 },
+      { x: -behindPanel - lockThickness * 0.82, z: hookTopY - lockDrop * 0.48 },
+      { x: -behindPanel - lockThickness * 0.42, z: hookTopY - lockDrop },
+      { x: -behindPanel, z: hookTopY - lockDrop },
+      { x: -behindPanel, z: hookTopY - neckHeight },
+      { x: bodyOverlap, z: hookTopY - neckHeight },
+    ]
     primitives.push(
-      boxPrimitive(`skadis-krcek-${index + 1}`, [connectorWidth, neckHeight, neckDepth], [x, neckY, (bodyOverlap - behindPanel) / 2]),
-      boxPrimitive(`skadis-zamek-${index + 1}`, [connectorWidth, lockDrop, lockThickness], [x, neckY - neckHeight / 2 - lockDrop / 2 + 0.6, -behindPanel - lockThickness / 2]),
+      profilePrimitive(`skadis-nosny-hak-${index + 1}`, hookProfile, connectorWidth, [x, 0, 0]),
+      boxPrimitive(`skadis-stabilizator-${index + 1}`, [connectorWidth, Math.max(5, settings.skadisSlotHeight * 0.42), behindPanel + bodyOverlap], [x, stabilizerY, (bodyOverlap - behindPanel) / 2]),
     )
   })
   return { primitives, bodyHeight, lockThickness, behindPanel }
@@ -396,6 +410,30 @@ function bellPolygon(centerX: number, centerZ: number, width: number, height: nu
   return closedPolygon(outline)
 }
 
+function leafPolygon(centerX: number, centerZ: number, length: number, width: number, rotation: number) {
+  const cosine = Math.cos(rotation)
+  const sine = Math.sin(rotation)
+  return closedPolygon([
+    { x: -length / 2, z: 0 },
+    { x: 0, z: width / 2 },
+    { x: length / 2, z: 0 },
+    { x: 0, z: -width / 2 },
+  ].map((point) => ({
+    x: centerX + point.x * cosine - point.z * sine,
+    z: centerZ + point.x * sine + point.z * cosine,
+  })))
+}
+
+function hangingStarPolygons(xs: number[], startZ: number, endZ: number, radius: number, bridge: number): Polygon[] {
+  return xs.flatMap((x, index) => {
+    const centerZ = startZ + (endZ - startZ) * (index % 2 === 0 ? 0.52 : 0.68)
+    return [
+      rectanglePolygon(bridge, Math.abs(endZ - centerZ) + radius, x, (endZ + centerZ - Math.sign(endZ - centerZ) * radius) / 2),
+      closedPolygon(radialOutline(radius, 10, 0.43, x, centerZ)),
+    ]
+  })
+}
+
 function christmasMotifPolygons(style: GadgetSettings['ornamentStyle'], innerRadius: number, nameHalfHeight: number, bridge: number): Polygon[] {
   const topStart = nameHalfHeight - bridge * 0.25
   const topEnd = innerRadius + bridge * 0.7
@@ -437,7 +475,7 @@ function christmasMotifPolygons(style: GadgetSettings['ornamentStyle'], innerRad
         ]))
       })
     })
-  } else {
+  } else if (style === 'bells') {
     const bellHeight = topSpace * 0.58
     const bellWidth = innerRadius * 0.43
     ;[-innerRadius * 0.27, innerRadius * 0.27].forEach((x) => {
@@ -451,6 +489,89 @@ function christmasMotifPolygons(style: GadgetSettings['ornamentStyle'], innerRad
       const center = bottomStart - bottomSpace * (index === 1 ? 0.63 : 0.5)
       solids.push(rectanglePolygon(bridge, bottomStart - center + baubleRadius, x, (bottomStart + center - baubleRadius) / 2))
       solids.push(circlePolygon(baubleRadius, x, center))
+    })
+  } else if (style === 'reindeer') {
+    const headZ = topStart + topSpace * 0.43
+    const headRadius = topSpace * 0.19
+    solids.push(rectanglePolygon(bridge, topSpace, 0, (topStart + topEnd) / 2))
+    solids.push(circlePolygon(headRadius, 0, headZ))
+    solids.push(circlePolygon(headRadius * 0.52, 0, headZ - headRadius * 0.72))
+    ;[-1, 1].forEach((direction) => {
+      solids.push(closedPolygon([
+        { x: direction * headRadius * 0.62, z: headZ + headRadius * 0.35 },
+        { x: direction * headRadius * 1.35, z: headZ + headRadius * 0.78 },
+        { x: direction * headRadius * 0.72, z: headZ - headRadius * 0.02 },
+      ]))
+      solids.push(rectanglePolygon(bridge, topSpace * 0.48, direction * headRadius * 0.75, headZ + topSpace * 0.27, direction * 0.34))
+      solids.push(rectanglePolygon(bridge, topSpace * 0.24, direction * headRadius * 1.3, headZ + topSpace * 0.38, direction * 0.92))
+    })
+    solids.push(...hangingStarPolygons([-innerRadius * 0.5, 0, innerRadius * 0.5], bottomStart, bottomEnd, bottomSpace * 0.16, bridge))
+  } else if (style === 'village') {
+    solids.push(...hangingStarPolygons([-innerRadius * 0.48, 0, innerRadius * 0.48], topEnd, topStart, topSpace * 0.14, bridge))
+    const houseWidth = innerRadius * 0.38
+    const houseHeight = bottomSpace * 0.43
+    ;[-innerRadius * 0.48, 0, innerRadius * 0.48].forEach((x, index) => {
+      const roofZ = bottomStart - bottomSpace * (index === 1 ? 0.3 : 0.22)
+      solids.push(rectanglePolygon(bridge, bottomStart - bottomEnd, x, (bottomStart + bottomEnd) / 2))
+      solids.push(rectanglePolygon(houseWidth, houseHeight, x, roofZ - houseHeight * 0.62))
+      solids.push(closedPolygon([
+        { x, z: roofZ + houseHeight * 0.28 },
+        { x: x + houseWidth * 0.62, z: roofZ - houseHeight * 0.14 },
+        { x: x - houseWidth * 0.62, z: roofZ - houseHeight * 0.14 },
+      ]))
+      solids.push(rectanglePolygon(bridge * 0.85, houseHeight * 0.55, x + houseWidth * 0.22, roofZ + houseHeight * 0.18))
+    })
+  } else if (style === 'holly') {
+    const centerZ = topStart + topSpace * 0.52
+    solids.push(rectanglePolygon(bridge, topSpace, 0, (topStart + topEnd) / 2))
+    ;[-1, 1].forEach((direction) => {
+      solids.push(rectanglePolygon(bridge, innerRadius * 0.88, direction * innerRadius * 0.18, centerZ, direction * 0.72))
+      ;[-0.23, 0.12, 0.46].forEach((offset, index) => {
+        solids.push(leafPolygon(direction * innerRadius * (0.18 + offset), centerZ + topSpace * offset, innerRadius * 0.34, topSpace * 0.26, direction * (index % 2 === 0 ? 0.38 : 1.03)))
+      })
+    })
+    ;[-bridge * 1.15, 0, bridge * 1.15].forEach((x) => solids.push(circlePolygon(bridge * 0.82, x, centerZ - bridge * 0.4)))
+    const baubleRadius = bottomSpace * 0.17
+    ;[-innerRadius * 0.5, 0, innerRadius * 0.5].forEach((x, index) => {
+      const center = bottomStart - bottomSpace * (index === 1 ? 0.66 : 0.5)
+      solids.push(rectanglePolygon(bridge, bottomStart - center + baubleRadius, x, (bottomStart + center - baubleRadius) / 2))
+      solids.push(circlePolygon(baubleRadius, x, center))
+      solids.push(rectanglePolygon(baubleRadius * 1.3, bridge * 0.7, x, center))
+    })
+  } else if (style === 'angel') {
+    const centerZ = topStart + topSpace * 0.48
+    const headRadius = topSpace * 0.13
+    solids.push(rectanglePolygon(bridge, topSpace, 0, (topStart + topEnd) / 2))
+    solids.push(circlePolygon(headRadius, 0, centerZ + topSpace * 0.23))
+    solids.push(closedPolygon([
+      { x: 0, z: centerZ + topSpace * 0.15 },
+      { x: innerRadius * 0.24, z: topStart - bridge * 0.2 },
+      { x: -innerRadius * 0.24, z: topStart - bridge * 0.2 },
+    ]))
+    ;[-1, 1].forEach((direction) => solids.push(closedPolygon([
+      { x: direction * bridge * 0.4, z: centerZ + topSpace * 0.08 },
+      { x: direction * innerRadius * 0.58, z: centerZ + topSpace * 0.28 },
+      { x: direction * innerRadius * 0.32, z: centerZ - topSpace * 0.2 },
+    ])))
+    solids.push(...hangingStarPolygons([-innerRadius * 0.5, 0, innerRadius * 0.5], bottomStart, bottomEnd, bottomSpace * 0.16, bridge))
+  } else {
+    const bowZ = topStart + topSpace * 0.52
+    solids.push(rectanglePolygon(bridge, topSpace, 0, (topStart + topEnd) / 2))
+    solids.push(leafPolygon(-innerRadius * 0.16, bowZ, innerRadius * 0.34, topSpace * 0.26, 0.22))
+    solids.push(leafPolygon(innerRadius * 0.16, bowZ, innerRadius * 0.34, topSpace * 0.26, -0.22))
+    solids.push(circlePolygon(bridge, 0, bowZ))
+    solids.push(rectanglePolygon(bridge, topSpace * 0.46, -bridge * 0.7, bowZ - topSpace * 0.22, 0.18))
+    solids.push(rectanglePolygon(bridge, topSpace * 0.46, bridge * 0.7, bowZ - topSpace * 0.22, -0.18))
+    const giftWidth = innerRadius * 0.38
+    const giftHeight = bottomSpace * 0.48
+    ;[-innerRadius * 0.48, 0, innerRadius * 0.48].forEach((x, index) => {
+      const center = bottomStart - bottomSpace * (index === 1 ? 0.62 : 0.5)
+      solids.push(rectanglePolygon(bridge, bottomStart - center + giftHeight / 2, x, (bottomStart + center - giftHeight / 2) / 2))
+      solids.push(rectanglePolygon(giftWidth, giftHeight, x, center))
+      solids.push(rectanglePolygon(bridge, giftHeight, x, center))
+      solids.push(rectanglePolygon(giftWidth * 1.08, bridge * 0.8, x, center + giftHeight * 0.18))
+      solids.push(leafPolygon(x - bridge * 0.9, center + giftHeight * 0.55, bridge * 2.4, bridge * 1.25, 0.42))
+      solids.push(leafPolygon(x + bridge * 0.9, center + giftHeight * 0.55, bridge * 2.4, bridge * 1.25, -0.42))
     })
   }
   return solids
@@ -559,7 +680,19 @@ export function createGadgetGroup(data: GadgetGeometryData) {
     group.add(mesh)
   })
   data.primitives.forEach((primitive, index) => {
-    const geometry = new THREE.BoxGeometry(...primitive.size)
+    let geometry: THREE.BufferGeometry
+    if (primitive.kind === 'box') {
+      geometry = new THREE.BoxGeometry(...primitive.size)
+    } else {
+      const shape = new THREE.Shape()
+      shape.moveTo(primitive.outline[0].x, primitive.outline[0].z)
+      primitive.outline.slice(1).forEach((point) => shape.lineTo(point.x, point.z))
+      shape.closePath()
+      geometry = new THREE.ExtrudeGeometry(shape, { depth: primitive.extrusion, bevelEnabled: false, steps: 1 })
+      geometry.rotateY(-Math.PI / 2)
+      geometry.translate(primitive.extrusion / 2, 0, 0)
+      geometry.computeVertexNormals()
+    }
     const material = new THREE.MeshStandardMaterial({ color: colors[(data.parts.length + index) % colors.length], roughness: 0.62 })
     const mesh = new THREE.Mesh(geometry, material)
     mesh.name = primitive.name

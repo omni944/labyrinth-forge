@@ -16,7 +16,7 @@ export type GadgetType =
   | 'skadis-shelf'
   | 'name-ornament'
 
-export type OrnamentStyle = 'snowflake' | 'trees' | 'bells'
+export type OrnamentStyle = 'snowflake' | 'trees' | 'bells' | 'reindeer' | 'village' | 'holly' | 'angel' | 'gifts'
 
 export type Direction = 'n' | 'e' | 's' | 'w'
 
@@ -183,10 +183,17 @@ export interface GadgetPart {
   operation?: 'cut' | 'engrave'
 }
 
-export interface GadgetPrimitive {
+export type GadgetPrimitive = {
   name: string
   kind: 'box'
   size: [number, number, number]
+  position: [number, number, number]
+  rotation: [number, number, number]
+} | {
+  name: string
+  kind: 'profile'
+  outline: TemplatePoint[]
+  extrusion: number
   position: [number, number, number]
   rotation: [number, number, number]
 }

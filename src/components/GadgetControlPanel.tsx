@@ -24,9 +24,9 @@ const TYPE_SECTIONS: Array<{ name: string; types: Array<{ value: GadgetType; nam
     { value: 'headphone-stand', name: 'Stojan na sluchátka', description: 'Dvoudílný stojan se širokou horní opěrkou' },
   ] },
   { name: 'SKÅDIS doplňky', types: [
-    { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Jednoduchý závěsný háček s jedním zámkem' },
-    { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Výsuvná deska s otvory a dvěma zámky' },
-    { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Malá polička s předním dorazem a dvěma zámky' },
+    { value: 'skadis-hook', name: 'SKÅDIS háček', description: 'Nosný J-hák se spodním stabilizačním kolíkem' },
+    { value: 'skadis-tool-holder', name: 'SKÅDIS držák nástrojů', description: 'Deska s otvory, dvěma J-háky a stabilizátory' },
+    { value: 'skadis-shelf', name: 'SKÅDIS polička', description: 'Polička se dvěma J-háky a spodními kolíky' },
   ] },
   { name: 'Dekorace a dárky', types: [
     { value: 'name-ornament', name: 'Vánoční ozdoba se jménem', description: 'Jednodílný průřez s rámem a motivy pro CNC frézku' },
@@ -99,6 +99,11 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
                 <option value="snowflake">Vločka a hvězdy</option>
                 <option value="trees">Stromečky a hvězdy</option>
                 <option value="bells">Zvonečky a baňky</option>
+                <option value="reindeer">Sob s parohy</option>
+                <option value="village">Zimní vesnice</option>
+                <option value="holly">Cesmína a baňky</option>
+                <option value="angel">Anděl a hvězdy</option>
+                <option value="gifts">Dárky a mašle</option>
               </select>
             </label>
             <RangeControl label="Šířka obvodového rámu" value={settings.ornamentFrameWidth} min={3} max={12} step={0.5} unit=" mm" onChange={(v) => onChange('ornamentFrameWidth', v)} />
@@ -184,7 +189,7 @@ export function GadgetControlPanel({ settings, partCount, mode, onModeChange, on
             {settings.type !== 'skadis-hook' && <RangeControl label="Rozteč zámků" value={settings.skadisMountSpacing} min={20} max={80} step={20} unit=" mm" onChange={(v) => onChange('skadisMountSpacing', v)} />}
             <RangeControl label="Vůle v drážce" value={settings.fitClearance} min={0.1} max={1.2} step={0.1} unit=" mm" onChange={(v) => onChange('fitClearance', v)} />
             <RangeControl label="Vůle za deskou" value={settings.skadisBackClearance} min={0.1} max={1.5} step={0.1} unit=" mm" onChange={(v) => onChange('skadisBackClearance', v)} />
-            <p className="section-note">Nejdřív vytiskněte testovací kus a dolaďte vůle podle své desky, tiskárny a materiálu.</p>
+            <p className="section-note">Nosný J-hák se zasune horní částí drážky a po spuštění zachytí za deskou; spodní kolík brání vyklopení. Nejdřív vytiskněte testovací kus a dolaďte vůle podle své desky.</p>
           </section>
         )}
 
