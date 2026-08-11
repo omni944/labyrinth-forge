@@ -573,8 +573,25 @@ function polylinePolygons(points: Array<[number, number]>, width: number) {
   return points.slice(1).map(([toX, toZ], index) => segmentPolygon(points[index][0], points[index][1], toX, toZ, width))
 }
 
+const GEOMETRY_PRECISION = 1_000
+
+function snapCoordinate(value: number) {
+  return Math.round(value * GEOMETRY_PRECISION) / GEOMETRY_PRECISION
+}
+
+function snapPolygon(polygon: Polygon): Polygon {
+  return polygon.map((ring) => ring.map(([x, z]) => [snapCoordinate(x), snapCoordinate(z)] as [number, number]))
+}
+
+function snapMultiPolygon(geometry: MultiPolygon): MultiPolygon {
+  return geometry.map(snapPolygon)
+}
+
 function unionPolygons(base: MultiPolygon, polygons: Polygon[]) {
-  return polygons.reduce<MultiPolygon>((geometry, polygon) => polygonUnion(geometry, polygon), base)
+  return polygons.reduce<MultiPolygon>(
+    (geometry, polygon) => snapMultiPolygon(polygonUnion(geometry, snapPolygon(polygon))),
+    snapMultiPolygon(base),
+  )
 }
 
 function pineTreePolygons(centerX: number, baseZ: number, width: number, height: number, bridge: number): Polygon[] {
@@ -659,7 +676,12 @@ function finishOrnament(name: string, geometry: MultiPolygon, settings: GadgetSe
   const capSlots = includeCapSlots
     ? [-1, 0, 1].map((index) => rectanglePolygon(shell.bridge * 0.55, shell.capHeight * 0.52, index * shell.capWidth * 0.23, shell.radius + shell.capHeight * 0.42))
     : []
-  const assembled = polygonDifference(geometry, circlePolygon(hangingHoleRadius, 0, shell.loopCenterZ), ...capSlots, ...decorativeCutouts)
+  const assembled = polygonDifference(
+    snapMultiPolygon(geometry),
+    snapPolygon(circlePolygon(hangingHoleRadius, 0, shell.loopCenterZ)),
+    ...capSlots.map(snapPolygon),
+    ...decorativeCutouts.map(snapPolygon),
+  )
   const allPoints = assembled.flatMap((polygon) => polygon[0])
   const minX = Math.min(...allPoints.map(([x]) => x))
   const maxX = Math.max(...allPoints.map(([x]) => x))

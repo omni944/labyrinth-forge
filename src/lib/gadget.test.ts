@@ -209,6 +209,24 @@ describe('generateGadget', () => {
     expect(createGadgetGroup(data).getObjectByName('jelen-ve-snehu')).toBeDefined()
   })
 
+  it.each(['tree-of-life-ornament', 'leaping-reindeer-ornament'] as const)('%s je stabilní v celém rozsahu posuvníku', (type) => {
+    const failures: number[] = []
+    for (let gadgetWidth = 80; gadgetWidth <= 300; gadgetWidth += 5) {
+      try {
+        const data = generateGadget({
+          ...settings,
+          type,
+          gadgetWidth,
+          ornamentBridgeWidth: type === 'tree-of-life-ornament' ? 5 : 4,
+        })
+        if (data.parts.length !== 1) failures.push(gadgetWidth)
+      } catch {
+        failures.push(gadgetWidth)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
   it('SVG a DXF ozdoby obsahují vnější konturu a vnitřní CNC výřezy', () => {
     const data = generateGadget({ ...settings, type: 'name-ornament' })
     const svg = buildGadgetSVG(data)
