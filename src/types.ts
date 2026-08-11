@@ -23,6 +23,7 @@ export type GadgetType =
   | 'tree-of-life-ornament'
   | 'nordic-snowflake-ornament'
   | 'woodland-ornament'
+  | 'leaping-reindeer-ornament'
 
 export type OrnamentStyle = 'snowflake' | 'trees' | 'bells' | 'reindeer' | 'village' | 'holly' | 'angel' | 'gifts'
 

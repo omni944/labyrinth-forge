@@ -188,6 +188,8 @@ function App() {
                               ? { materialThickness: 6, gadgetWidth: 150, gadgetDepth: 150, ornamentFrameWidth: 5, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
                               : type === 'woodland-ornament'
                                 ? { materialThickness: 6, gadgetWidth: 180, gadgetDepth: 180, ornamentFrameWidth: 6, ornamentBridgeWidth: 4.5, ornamentHangingHole: 6 }
+                                : type === 'leaping-reindeer-ornament'
+                                  ? { materialThickness: 4, gadgetWidth: 160, gadgetDepth: 160, ornamentFrameWidth: 6, ornamentBridgeWidth: 4, ornamentHangingHole: 6 }
                       : { materialThickness: 8, gadgetWidth: 160, gadgetDepth: 60, cableSlotCount: 5, cableSlotWidth: 12, cableSlotDepth: 30 }
       setGadgetSettings((current) => ({ ...current, ...preset, type }))
       return

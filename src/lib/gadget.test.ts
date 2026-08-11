@@ -190,6 +190,7 @@ describe('generateGadget', () => {
     ['tree-of-life-ornament', 'strom-zivota', 8],
     ['nordic-snowflake-ornament', 'severska-vlocka', 8],
     ['woodland-ornament', 'pulnocni-les', 5],
+    ['leaping-reindeer-ornament', 'jelen-ve-snehu', 20],
   ] as const)('propracovaný CNC dekor %s vytvoří jeden souvislý díl', (type, partName, minimumCutouts) => {
     const data = generateGadget({ ...settings, type, gadgetWidth: 180, materialThickness: 6 })
     expect(data.layout).toBe('assembled')
@@ -199,6 +200,13 @@ describe('generateGadget', () => {
     expect(data.width).toBeGreaterThanOrEqual(180)
     expect(buildGadgetSVG(data)).toContain('class="cutout"')
     expect(buildGadgetDXF(data)).toContain(`${partName.toUpperCase().replaceAll('-', '_')}_OUTLINE`)
+  })
+
+  it.each([80, 300])('jelen ve sněhu zůstane vyrobitelný při průměru %d mm', (gadgetWidth) => {
+    const data = generateGadget({ ...settings, type: 'leaping-reindeer-ornament', gadgetWidth })
+    expect(data.parts).toHaveLength(1)
+    expect(data.parts[0].cutouts.length).toBeGreaterThanOrEqual(20)
+    expect(createGadgetGroup(data).getObjectByName('jelen-ve-snehu')).toBeDefined()
   })
 
   it('SVG a DXF ozdoby obsahují vnější konturu a vnitřní CNC výřezy', () => {

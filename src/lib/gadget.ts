@@ -638,10 +638,27 @@ function ornamentShell(settings: GadgetSettings): OrnamentShell {
   }
 }
 
-function finishOrnament(name: string, geometry: MultiPolygon, settings: GadgetSettings, shell: OrnamentShell, decorativeCutouts: Polygon[] = []): GadgetGeometryData {
+function simpleTabOrnamentShell(settings: GadgetSettings): OrnamentShell {
+  const shell = ornamentShell(settings)
+  const radius = settings.gadgetWidth / 2
+  const loopRadius = settings.gadgetWidth * 0.075
+  const loopCenterZ = radius + loopRadius * 0.55
+  const outerSolid = polygonUnion(circlePolygon(radius), circlePolygon(loopRadius, 0, loopCenterZ))
+  return {
+    ...shell,
+    loopRadius,
+    loopCenterZ,
+    outerSolid,
+    frameGeometry: polygonDifference(outerSolid, circlePolygon(radius - shell.frame)),
+  }
+}
+
+function finishOrnament(name: string, geometry: MultiPolygon, settings: GadgetSettings, shell: OrnamentShell, decorativeCutouts: Polygon[] = [], includeCapSlots = true): GadgetGeometryData {
   const maximumHoleRadius = Math.max(1.5, shell.loopRadius - shell.bridge * 0.75)
   const hangingHoleRadius = Math.min(settings.ornamentHangingHole / 2, maximumHoleRadius)
-  const capSlots = [-1, 0, 1].map((index) => rectanglePolygon(shell.bridge * 0.55, shell.capHeight * 0.52, index * shell.capWidth * 0.23, shell.radius + shell.capHeight * 0.42))
+  const capSlots = includeCapSlots
+    ? [-1, 0, 1].map((index) => rectanglePolygon(shell.bridge * 0.55, shell.capHeight * 0.52, index * shell.capWidth * 0.23, shell.radius + shell.capHeight * 0.42))
+    : []
   const assembled = polygonDifference(geometry, circlePolygon(hangingHoleRadius, 0, shell.loopCenterZ), ...capSlots, ...decorativeCutouts)
   const allPoints = assembled.flatMap((polygon) => polygon[0])
   const minX = Math.min(...allPoints.map(([x]) => x))
@@ -656,6 +673,23 @@ function finishOrnament(name: string, geometry: MultiPolygon, settings: GadgetSe
     height: settings.materialThickness,
     layout: 'assembled',
   }
+}
+
+function snowflakeCutout(centerX: number, centerZ: number, radius: number, bridge: number): Polygon[] {
+  if (radius < bridge * 2.4) return [closedPolygon(radialOutline(radius, 12, 0.38, centerX, centerZ))]
+  const pieces: Polygon[] = [circlePolygon(Math.max(bridge * 0.48, radius * 0.13), centerX, centerZ, 28)]
+  Array.from({ length: 6 }, (_, index) => Math.PI / 2 + (index / 6) * Math.PI * 2).forEach((angle) => {
+    const endX = centerX + Math.cos(angle) * radius
+    const endZ = centerZ + Math.sin(angle) * radius
+    const branchX = centerX + Math.cos(angle) * radius * 0.55
+    const branchZ = centerZ + Math.sin(angle) * radius * 0.55
+    pieces.push(
+      segmentPolygon(centerX, centerZ, endX, endZ, bridge * 0.72),
+      circlePolygon(bridge * 0.42, endX, endZ, 24),
+    )
+    if (radius >= bridge * 2.4) pieces.push(leafPolygon(branchX, branchZ, bridge * 2.1, bridge * 1.25, angle))
+  })
+  return unionPolygons([pieces[0]], pieces.slice(1))
 }
 
 function hangingStarPolygons(xs: number[], startZ: number, endZ: number, radius: number, bridge: number): Polygon[] {
@@ -985,6 +1019,65 @@ function woodlandOrnament(settings: GadgetSettings): GadgetGeometryData {
   return finishOrnament('pulnocni-les', unionPolygons(shell.frameGeometry, solids), settings, shell, [crescentCutout])
 }
 
+function leapingReindeerOrnament(settings: GadgetSettings): GadgetGeometryData {
+  const shell = simpleTabOrnamentShell(settings)
+  const r = shell.radius
+  const b = shell.bridge
+  const deerParts: Polygon[] = [
+    ellipsePolygon(r * 0.29, r * 0.15, -r * 0.08, -r * 0.1, -0.05),
+    closedPolygon([
+      { x: r * 0.08, z: -r * 0.08 },
+      { x: r * 0.1, z: r * 0.2 },
+      { x: r * 0.14, z: r * 0.36 },
+      { x: r * 0.24, z: r * 0.37 },
+      { x: r * 0.25, z: r * 0.12 },
+      { x: r * 0.2, z: -r * 0.08 },
+    ]),
+    ellipsePolygon(r * 0.13, r * 0.078, r * 0.2, r * 0.37, -0.12),
+    ellipsePolygon(r * 0.09, r * 0.052, r * 0.31, r * 0.35, -0.1),
+    leafPolygon(r * 0.1, r * 0.43, r * 0.14, r * 0.065, 2.72),
+    closedPolygon([
+      { x: -r * 0.31, z: -r * 0.01 },
+      { x: -r * 0.45, z: r * 0.04 },
+      { x: -r * 0.38, z: -r * 0.08 },
+      { x: -r * 0.27, z: -r * 0.11 },
+    ]),
+    ...polylinePolygons([[-r * 0.22, -r * 0.19], [-r * 0.3, -r * 0.37], [-r * 0.43, -r * 0.49]], r * 0.075),
+    rectanglePolygon(r * 0.13, r * 0.07, -r * 0.46, -r * 0.51, -0.56),
+    ...polylinePolygons([[-r * 0.03, -r * 0.2], [-r * 0.14, -r * 0.39], [-r * 0.22, -r * 0.48]], r * 0.065),
+    ...polylinePolygons([[r * 0.14, -r * 0.17], [r * 0.34, -r * 0.25], [r * 0.28, -r * 0.43]], r * 0.073),
+    rectanglePolygon(r * 0.12, r * 0.062, r * 0.25, -r * 0.46, 0.52),
+  ]
+
+  const antlerWidth = Math.max(b * 0.9, r * 0.045)
+  deerParts.push(
+    ...polylinePolygons([[r * 0.17, r * 0.4], [r * 0.09, r * 0.54], [-r * 0.02, r * 0.64]], antlerWidth),
+    ...polylinePolygons([[r * 0.08, r * 0.55], [r * 0.18, r * 0.67], [r * 0.2, r * 0.75]], antlerWidth * 0.82),
+    ...polylinePolygons([[r * 0.01, r * 0.63], [-r * 0.13, r * 0.72], [-r * 0.17, r * 0.79]], antlerWidth * 0.82),
+    ...polylinePolygons([[r * 0.2, r * 0.42], [r * 0.27, r * 0.57], [r * 0.36, r * 0.65]], antlerWidth * 0.9),
+    ...polylinePolygons([[r * 0.27, r * 0.56], [r * 0.36, r * 0.72]], antlerWidth * 0.78),
+    circlePolygon(antlerWidth * 0.48, r * 0.2, r * 0.75, 22),
+    circlePolygon(antlerWidth * 0.45, -r * 0.17, r * 0.79, 22),
+    circlePolygon(antlerWidth * 0.44, r * 0.36, r * 0.72, 22),
+  )
+
+  const cutouts: Polygon[] = unionPolygons([deerParts[0]], deerParts.slice(1))
+  ;[
+    { x: -r * 0.56, z: r * 0.27, radius: r * 0.13 },
+    { x: r * 0.58, z: r * 0.16, radius: r * 0.12 },
+    { x: r * 0.03, z: -r * 0.7, radius: r * 0.115 },
+  ].forEach((snowflake) => cutouts.push(...snowflakeCutout(snowflake.x, snowflake.z, snowflake.radius, Math.max(b * 0.72, r * 0.035))))
+
+  ;[
+    [-0.54, 0.61, 0.038], [-0.3, 0.72, 0.026], [0.52, 0.63, 0.024], [0.7, 0.48, 0.035],
+    [-0.72, 0.02, 0.024], [-0.58, -0.2, 0.042], [0.63, -0.17, 0.042], [0.74, -0.38, 0.025],
+    [-0.62, -0.52, 0.028], [-0.38, -0.67, 0.045], [0.38, -0.66, 0.032], [0.57, -0.54, 0.045],
+    [-0.47, 0.46, 0.019], [0.46, 0.42, 0.022], [-0.51, -0.36, 0.019], [0.48, -0.4, 0.018],
+  ].forEach(([x, z, radius]) => cutouts.push(circlePolygon(r * radius, r * x, r * z, 28)))
+
+  return finishOrnament('jelen-ve-snehu', shell.outerSolid, settings, shell, cutouts, false)
+}
+
 function isOrnamentType(type: GadgetSettings['type']) {
   return type.endsWith('-ornament')
 }
@@ -994,6 +1087,7 @@ function ornamentByType(settings: GadgetSettings) {
   if (settings.type === 'tree-of-life-ornament') return treeOfLifeOrnament(settings)
   if (settings.type === 'nordic-snowflake-ornament') return nordicSnowflakeOrnament(settings)
   if (settings.type === 'woodland-ornament') return woodlandOrnament(settings)
+  if (settings.type === 'leaping-reindeer-ornament') return leapingReindeerOrnament(settings)
   return nameOrnament(settings)
 }
 

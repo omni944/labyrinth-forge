@@ -48,6 +48,7 @@ const ORNAMENT_TYPE_SECTIONS: GadgetTypeSection[] = [
     { value: 'tree-of-life-ornament', name: 'Strom života', description: 'Rozvětvená koruna, jemné listy a kořeny v kruhovém rámu' },
     { value: 'nordic-snowflake-ornament', name: 'Severská vločka', description: 'Šestiosá vločka s bočními větvemi a ornamentálními průřezy' },
     { value: 'woodland-ornament', name: 'Půlnoční les', description: 'Vrstvené hory, smrky, jelen a zavěšený měsíc' },
+    { value: 'leaping-reindeer-ornament', name: 'Jelen ve sněhu', description: 'Skákající jelen, tři vločky a jemné sněžení v plné baňce' },
   ] },
 ]
 
